@@ -1,0 +1,9 @@
+# Los .bat de Windows fallan con saltos de linea LF: siempre CRLF al bajar el repositorio
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.txt text eol=crlf
+*.png binary
+*.jpg binary
+*.webp binary

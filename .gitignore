@@ -1,0 +1,18 @@
+# datos de cada PC (los crean los scripts)
+mi-instalacion.json
+referencia/resultado_prueba.png
+referencia/diagnostico.txt
+
+# imagenes personales: el repositorio es publico
+referencia/*.png
+referencia/*.jpg
+referencia/*.webp
+referencia/ejemplos/
+
+# Python
+__pycache__/
+*.pyc
+
+# paquetes armados a mano
+*.zip
+*.7z

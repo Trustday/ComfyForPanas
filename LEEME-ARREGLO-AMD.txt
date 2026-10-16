@@ -1,0 +1,57 @@
+ARREGLO PARA TARJETAS AMD RADEON (Editor Qwen muy lento o con imágenes negras)
+===============================================================================
+
+Para quien YA instaló el Editor Qwen con comfyui-rocm y cada edición tarda muchísimo
+(en una RX 6600 XT llegó a 1 hora y media; en una RX 6700 XT, unos 18 minutos).
+
+Por qué pasa:
+  El modelo (7.6 GB) no cabe en la memoria de la tarjeta junto con todo lo demás, así que
+  en cada paso se copia desde la RAM. Con 16 GB de RAM incluso se lee desde el disco.
+
+Qué hacer (unos minutos más la descarga de 4 a 14 GB):
+  1. Cierra la ventana negra de ComfyUI si está abierta.
+  2. Pon al día ComfyForPanas: doble clic en  ComfyForPanas\Actualizar.bat
+     (si aún no lo tienes, bájalo como dice el README, paso 3).
+  3. Doble clic en  ComfyForPanas\scripts\4-Arreglo-AMD.bat
+       - arrastra a la ventana tu carpeta comfyui-rocm y presiona Enter
+       - escribe los GB de tu tarjeta (RX 6600 / 6600 XT = 8, RX 6700 XT = 12) y Enter
+       - si guardaste los modelos en otra carpeta, arrástrala; si no, Enter
+  4. Abre el editor con  Abrir-Editor-Qwen.bat  (en tu carpeta comfyui-rocm).
+  5. En el editor deja marcado "Rápido" (junto al botón Enviar). La resolución parte en 768.
+
+Qué cambia:
+  - Modo Rápido: 8 pasos en vez de 25, con un modelo de 4.2 GB que sí cabe en la tarjeta.
+  - Codificador de texto liviano (9.4 GB en vez de 17.5), mismo resultado.
+  - ComfyUI ya no deja los modelos ocupando la RAM.
+  - VAE en precisión completa: se acaban las imágenes negras o con ruido.
+  - ComfyUI deja más memoria libre en la tarjeta (2 GB en tarjetas de 8 GB), para que no se
+    desborde a la RAM.
+
+Para saber si funcionó, mira la ventana negra de ComfyUI durante una edición:
+  - "loaded completely"           -> el modelo cupo entero (así debería ir rápido)
+  - "loaded partially ... offloaded" -> no cupo del todo
+  - los segundos por paso (terminan en "s/it"): fíjate en el paso 2 o 3, no en el 1,
+    porque el primero incluye preparar la tarjeta.
+
+SI SIGUE MUY LENTO (más de 30 segundos por paso), dos pruebas y me mandas los resultados:
+  A) Diagnóstico (unos segundos): cierra ComfyUI y haz doble clic en
+     ComfyForPanas\scripts\5-Diagnostico.bat  (arrastra tu carpeta comfyui-rocm).
+     Dice cuánto calcula tu tarjeta y si algo anda mal. Manda el archivo
+     ComfyForPanas\referencia\diagnostico.txt
+  B) Durante una edición, abre el Administrador de tareas > Rendimiento > GPU y mira
+     "Memoria de GPU dedicada" y "Memoria de GPU compartida". Si la compartida sube más
+     de 1 GB mientras dibuja, la tarjeta se está quedando sin memoria propia y usa la RAM
+     (eso la hace decenas de veces más lenta). Manda una captura.
+  Y también: la línea "loaded ...", los segundos por paso y cuánta RAM tiene tu PC.
+
+Si sale el error "valores inválidos (NaN)":
+  Abre siempre ComfyUI con  Abrir-Editor-Qwen.bat  (no con comfyui-rocm.bat): así arranca
+  con --fp32-vae, que evita las imágenes negras o con ruido en Radeon. Para comprobarlo, en
+  las primeras líneas de la ventana negra busca "starting with: [" y revisa que diga "fp32-vae".
+  Si no lo dice, vuelve a correr 4-Arreglo-AMD.bat.
+  Con este paquete el error además dice en qué parte falló (al leer tu imagen, al entender
+  el texto, al dibujar o al decodificar) y qué hacer. Si se repite, manda ese mensaje y la
+  ventana negra completa.
+
+Nota: estos cambios todavía no se probaron en una Radeon; se armaron a partir de los
+registros de una RX 6600 XT y una RX 6700 XT.

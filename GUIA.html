@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guia del Editor Qwen</title>
+<style>
+:root{--bg:#fff;--fg:#1c2024;--mut:#5b6670;--line:#d8dee4;--card:#f6f8fa;--acc:#0b6bcb;--code:#eef1f4;--warn:#fff4e5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--fg:#e6e9ee;--mut:#9aa4af;--line:#2a313a;--card:#171b21;--acc:#6cb2ff;--code:#1d232b;--warn:#2a2217}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:940px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.9rem;line-height:1.25;margin:.2em 0 .3em}
+h2{margin-top:2.2em;padding-top:.6em;border-top:1px solid var(--line);font-size:1.4rem}
+h3{margin-top:1.8em;font-size:1.12rem}
+a{color:var(--acc);overflow-wrap:anywhere}
+code{background:var(--code);padding:.12em .38em;border-radius:5px;font-size:.92em;overflow-wrap:anywhere}
+pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow:auto;position:relative;border:1px solid var(--line)}
+pre code{background:none;padding:0}
+.copy{position:absolute;top:8px;right:8px;font:12px system-ui;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer}
+blockquote{margin:1.1em 0;padding:.7em 1.1em;background:var(--warn);border-left:4px solid #e0a030;border-radius:6px}
+blockquote p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.94rem;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card)}
+img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+details{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:1em 0}
+summary{cursor:pointer;font-weight:600}
+.toc ul{margin:.4em 0;padding-left:1.1em}
+li{margin:.25em 0}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+@media print{.copy{display:none}}
+</style></head><body><main>
+<details open class="toc"><summary>Indice</summary>
+<div class="toc">
+<ul>
+<li><a href="#comfyforpanas-editor-de-imágenes-con-ia-tipo-gemini-en-tu-pc-nvidia-o-amd">ComfyForPanas: editor de imágenes con IA tipo Gemini, en tu PC (NVIDIA o AMD)</a><ul>
+<li><a href="#1-qué-necesitas">1. Qué necesitas</a></li>
+<li><a href="#2-qué-está-probado-y-qué-no-léelo">2. Qué está probado y qué no (léelo)</a></li>
+<li><a href="#3-instalación-con-tarjeta-nvidia">3. Instalación con tarjeta NVIDIA</a></li>
+<li><a href="#4-instalación-con-tarjeta-amd-radeon">4. Instalación con tarjeta AMD Radeon</a></li>
+<li><a href="#5-cómo-usar-el-editor">5. Cómo usar el editor</a></li>
+<li><a href="#6-qué-esperar-según-tu-tarjeta">6. Qué esperar según tu tarjeta</a></li>
+<li><a href="#7-extra-usarlo-dentro-de-comfyui">7. Extra: usarlo dentro de ComfyUI</a></li>
+<li><a href="#8-problemas-y-soluciones">8. Problemas y soluciones</a></li>
+<li><a href="#9-qué-trae-comfyforpanas">9. Qué trae ComfyForPanas</a></li>
+<li><a href="#10-licencia-y-créditos">10. Licencia y créditos</a></li>
+<li><a href="#11-actualizar">11. Actualizar</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+</details>
+<h1 id="comfyforpanas-editor-de-imágenes-con-ia-tipo-gemini-en-tu-pc-nvidia-o-amd">ComfyForPanas: editor de imágenes con IA tipo Gemini, en tu PC (NVIDIA o AMD)</h1>
+<p><strong>Windows 10/11 · tarjetas NVIDIA (GTX 10 en adelante) y AMD Radeon (RX 6000, 7000 y 9000) · se actualiza con un doble clic en <code>Actualizar.bat</code></strong></p>
+<p>Subes una imagen, escribes lo que quieres cambiar ("ponle una gorra roja", "cámbiale el fondo a una playa") y la IA te devuelve la imagen editada. Puedes seguir editando el resultado las veces que quieras, como en Gemini o Grok, pero <strong>todo corre en tu computador</strong>: no se sube nada a internet.</p>
+<p>Usa <strong>Qwen-Image-2.1</strong>, que hoy es el mejor modelo abierto para editar imágenes según el ranking independiente de Artificial Analysis. En nuestras pruebas dio resultados mucho mejores que Flux Kontext, el modelo del paquete anterior. Además, el editor <strong>protege lo que no pediste cambiar</strong>: la cara, el fondo y el resto de la imagen quedan idénticos al original, píxel por píxel.</p>
+<blockquote>
+<p><strong>¿Cuánto trabajo es?</strong> Son 3 programas que se instalan con "siguiente, siguiente", una descarga de ComfyUI, un comando para bajar ComfyForPanas y 2 archivos a los que les haces doble clic. Lo más lento es la descarga de los modelos (entre 18 y 34 GB, según lo que elijas). Calcula una tarde.</p>
+<p><strong>¿Ya lo tienes instalado?</strong> Para recibir arreglos y mejoras haz doble clic en <strong><code>Actualizar.bat</code></strong> (<a href="#11-actualizar">sección 11</a>). Si tenías el paquete anterior en zip (<code>EditorQwen-Paquete</code>), mira la misma sección.</p>
+</blockquote>
+<hr />
+<h2 id="1-qué-necesitas">1. Qué necesitas</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Mínimo</th>
+<th>Recomendado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tarjeta de video</td>
+<td>NVIDIA GTX 1070 / RX 6600 con <strong>8 GB</strong> de VRAM</td>
+<td>12 GB o más</td>
+</tr>
+<tr>
+<td>Memoria RAM</td>
+<td>16 GB</td>
+<td>32 GB</td>
+</tr>
+<tr>
+<td>Espacio libre en disco</td>
+<td>40 GB</td>
+<td>40 GB en un <strong>SSD</strong> (los modelos cargan mucho más rápido)</td>
+</tr>
+<tr>
+<td>Sistema</td>
+<td>Windows 10 u 11 de 64 bits</td>
+<td></td>
+</tr>
+<tr>
+<td>Internet</td>
+<td>Para la instalación y la descarga de modelos</td>
+<td>Después funciona sin internet</td>
+</tr>
+</tbody>
+</table>
+<p><strong>¿Cómo sé qué tarjeta y cuánta VRAM tengo?</strong> Presiona <code>Ctrl + Shift + Esc</code> (Administrador de tareas) → pestaña <strong>Rendimiento</strong> → <strong>GPU</strong>. Arriba a la derecha sale el nombre de la tarjeta, y abajo, <strong>"Memoria de GPU dedicada"</strong> (esa es la VRAM). La RAM aparece en <strong>Memoria</strong>.</p>
+<p>Después sigue <strong>solo la sección de tu marca</strong>: <a href="#3-instalación-con-tarjeta-nvidia">NVIDIA (sección 3)</a> o <a href="#4-instalación-con-tarjeta-amd-radeon">AMD (sección 4)</a>.</p>
+<hr />
+<h2 id="2-qué-está-probado-y-qué-no-léelo">2. Qué está probado y qué no (léelo)</h2>
+<table>
+<thead>
+<tr>
+<th>Parte</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Editor, protección y modelos (Qwen-Image-2.1 Q8_0)</td>
+<td><strong>Probados a fondo</strong> en una NVIDIA GTX 1070 de 8 GB con 32 GB de RAM: ropa, fondo, pose, expresión, accesorios, pelo y ediciones en varias vueltas.</td>
+</tr>
+<tr>
+<td>Scripts del paquete (instalar, descargar modelos, lanzador)</td>
+<td><strong>Probados en una instalación limpia</strong> del ComfyUI portable oficial para NVIDIA (versión 0.40.0, variante <code>cu126</code>): instalan todo, ComfyUI arranca, reconoce los nodos y los modelos, y el editor se abre. En esa instalación limpia <strong>no se generaron imágenes</strong>; la generación se probó en la instalación principal (mismos nodos y modelos, ComfyUI 0.41). De <code>3-Probar-Edicion</code> se probó la comprobación (conexión, nodos, modelos y subida de la imagen); la edición de prueba en sí no se ejecutó.</td>
+</tr>
+<tr>
+<td>Codificador de texto "int8" (para PCs con 16 GB de RAM y tarjetas AMD)</td>
+<td><strong>Probado</strong>: el resultado es prácticamente idéntico al normal (diferencia media de 0.26 sobre 255).</td>
+</tr>
+<tr>
+<td><strong>Modo Rápido (Turbo, 8 pasos)</strong></td>
+<td>Usa el modelo y el muestreo de la <strong>plantilla oficial</strong> de ComfyUI para Qwen-Image-2.1 Turbo. ComfyUI aceptó el proceso sin errores, pero <strong>todavía no comparé su calidad ni su velocidad</strong> con el modo Calidad. Si un resultado no te convence, repítelo en Calidad.</td>
+</tr>
+<tr>
+<td>NVIDIA RTX (serie 16, 20, 30, 40, 50)</td>
+<td><strong>No probado por mí</strong> (no tengo esas tarjetas). Usa el ComfyUI portable oficial y los mismos scripts; debería funcionar y ser bastante más rápido.</td>
+</tr>
+<tr>
+<td><strong>AMD Radeon</strong></td>
+<td><strong>Funciona</strong> en una RX 6700 XT y en una RX 6600 XT (pruebas de usuarios con <code>comfyui-rocm</code>), pero <strong>muy lento</strong> en modo Calidad a 1024: 35 s por paso en la 6700 XT y 209 s por paso en la 6600 XT. Una edición además salió dañada. La causa es que <strong>el modelo no cabe en la VRAM</strong>: se copia desde la RAM en cada paso, y con 16 GB de RAM incluso desde el disco. Este paquete trae arreglos que <strong>todavía no se probaron en una Radeon</strong>: modo Rápido con un modelo Turbo más chico que cabe en la tarjeta, resolución 768, codificador int8, VAE en precisión completa (<code>--fp32-vae</code>) y una caché que libera RAM. Si ya lo tenías instalado, usa <code>4-Arreglo-AMD.bat</code> (sección 11).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tiempos medidos en modo Calidad (GTX 1070, 8 GB):</strong> unos <strong>9 a 10 minutos por edición</strong> a 1024 y unos <strong>3 a 4 minutos</strong> a 512. El modo Rápido debería tardar cerca de un tercio en la parte de dibujo (sin medir). El editor te muestra los segundos por paso y el tiempo restante mientras trabaja.</p>
+<hr />
+<h2 id="3-instalación-con-tarjeta-nvidia">3. Instalación con tarjeta NVIDIA</h2>
+<h3 id="paso-1--instala-3-programas-una-sola-vez">Paso 1 · Instala 3 programas (una sola vez)</h3>
+<ol>
+<li><strong>Git</strong>: <a href="https://git-scm.com/download/win" target="_blank" rel="noopener">https://git-scm.com/download/win</a>. Instálalo con todas las opciones por defecto (siguiente, siguiente…).</li>
+<li><strong>7-Zip</strong>: <a href="https://www.7-zip.org/" target="_blank" rel="noopener">https://www.7-zip.org/</a>. Sirve para descomprimir archivos <code>.7z</code>.</li>
+<li><strong>Driver de NVIDIA actualizado</strong>: <a href="https://www.nvidia.com/es-la/drivers/" target="_blank" rel="noopener">https://www.nvidia.com/es-la/drivers/</a> (o la app de NVIDIA). Si tu driver es viejo, ComfyUI no arranca.</li>
+</ol>
+<h3 id="paso-2--descarga-comfyui-la-versión-portable-oficial">Paso 2 · Descarga ComfyUI (la versión "portable" oficial)</h3>
+<p>"Portable" quiere decir que no se instala: se descomprime y se usa. Elige <strong>uno</strong> según tu tarjeta:</p>
+<table>
+<thead>
+<tr>
+<th>Tu tarjeta</th>
+<th>Descarga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RTX 20, 30, 40, 50 o GTX 16</strong> (casi todas las actuales)</td>
+<td><a href="https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z" target="_blank" rel="noopener">https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z</a></td>
+</tr>
+<tr>
+<td><strong>GTX 10</strong> (1050, 1060, 1070, 1080) o más antigua</td>
+<td><a href="https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia_cu126.7z" target="_blank" rel="noopener">https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia_cu126.7z</a></td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Crea una carpeta con un nombre corto, por ejemplo <code>C:\IA</code>. <strong>Sin tildes ni ñ</strong>, y que no esté dentro de "Archivos de programa".</li>
+<li>Clic derecho en el archivo descargado → <strong>7-Zip → Extraer aquí</strong> (o "Extraer en…" y eliges <code>C:\IA</code>).</li>
+<li>Te queda la carpeta <strong><code>C:\IA\ComfyUI_windows_portable</code></strong>. Esa es tu carpeta de ComfyUI.</li>
+</ol>
+<h3 id="paso-3--baja-comfyforpanas">Paso 3 · Baja ComfyForPanas</h3>
+<ol>
+<li>Abre la carpeta <code>C:\IA</code> en el Explorador de archivos.</li>
+<li>Haz clic en la <strong>barra de direcciones</strong> (arriba, donde dice <code>C:\IA</code>), escribe <code>cmd</code> y presiona Enter. Se abre una ventana negra que ya está en esa carpeta.</li>
+<li>Copia esta línea, pégala en la ventana negra (clic derecho pega) y presiona Enter:</li>
+</ol>
+<p><code>git clone https://github.com/Trustday/ComfyForPanas</code></p>
+<ol start="4">
+<li>Te queda la carpeta <strong><code>C:\IA\ComfyForPanas</code></strong>. Ya puedes cerrar la ventana negra.</li>
+</ol>
+<blockquote>
+<p><strong>Otra forma, sin comandos:</strong> en <a href="https://github.com/Trustday/ComfyForPanas" target="_blank" rel="noopener">https://github.com/Trustday/ComfyForPanas</a>, botón verde <strong>Code → Download ZIP</strong>. Antes de descomprimirlo: clic derecho en el zip → <strong>Propiedades</strong> → marca <strong>Desbloquear</strong> → Aceptar (así Windows no bloquea los scripts). <code>Actualizar.bat</code> funciona igual: la primera vez convierte la carpeta en una copia clonada.</p>
+</blockquote>
+<h3 id="paso-4--instala-el-editor">Paso 4 · Instala el editor</h3>
+<ol>
+<li>Abre <code>ComfyForPanas\scripts</code> y haz doble clic en <strong><code>1-Instalar-Nodos.bat</code></strong>.</li>
+<li>Te pide la carpeta de ComfyUI: <strong>arrastra la carpeta <code>ComfyUI_windows_portable</code> a la ventana negra</strong> y presiona Enter.</li>
+<li>Te pregunta cuántos GB de VRAM tiene tu tarjeta: escribe el número (ej. <code>12</code>) y Enter.</li>
+<li>Espera a que todas las líneas digan <code>[ok]</code> y presiona una tecla para cerrar.</li>
+</ol>
+<blockquote>
+<p>Si Windows muestra "Windows protegió su PC", haz clic en <strong>Más información → Ejecutar de todas formas</strong>. Son scripts de texto que puedes abrir con el Bloc de notas para ver qué hacen.</p>
+</blockquote>
+<h3 id="paso-5--descarga-los-modelos-18-a-34-gb">Paso 5 · Descarga los modelos (18 a 34 GB)</h3>
+<ol>
+<li>Doble clic en <strong><code>2-Descargar-Modelos.bat</code></strong>.</li>
+<li>Arrastra otra vez la carpeta <code>ComfyUI_windows_portable</code> y presiona Enter.</li>
+<li>Te pregunta dónde guardar los modelos: <strong>presiona Enter</strong> para guardarlos dentro de ComfyUI. Si tienes un <strong>SSD</strong> con espacio y ComfyUI quedó en un disco duro normal, mejor arrastra una carpeta del SSD (los modelos cargarán mucho más rápido).</li>
+<li>Te pregunta si quieres el <strong>modo Rápido (Turbo)</strong>: presiona <strong>Enter</strong> para bajarlo (son 7.6 GB más, y edita unas 3 veces más rápido), o escribe <code>N</code> si no lo quieres.</li>
+<li>Espera. Si se corta internet o algo sale en rojo, <strong>vuelve a ejecutarlo</strong>: la descarga sigue donde quedó.</li>
+</ol>
+<p>El script elige solo la versión del codificador de texto: 17.5 GB si tienes 32 GB de RAM y una NVIDIA, o la versión "int8" de 9.4 GB (mismo resultado, carga más rápido) si tienes 16 GB de RAM o una tarjeta AMD.</p>
+<h3 id="paso-6--úsalo">Paso 6 · ¡Úsalo!</h3>
+<p>Doble clic en <strong><code>C:\IA\ComfyUI_windows_portable\Abrir-Editor-Qwen.bat</code></strong> (lo creó el paso 4).</p>
+<ul>
+<li>Se abre una ventana negra llamada <strong>"ComfyUI - Editor Qwen (no cerrar)"</strong>. <strong>No la cierres</strong> mientras uses el editor.</li>
+<li>Cuando ComfyUI termina de arrancar, el editor se abre solo en tu navegador.</li>
+<li>Para tenerlo a mano: clic derecho en <code>Abrir-Editor-Qwen.bat</code> → <strong>Enviar a → Escritorio (crear acceso directo)</strong>.</li>
+</ul>
+<p>Cómo se usa: <a href="#5-cómo-usar-el-editor">sección 5</a>.</p>
+<h3 id="paso-7-opcional--prueba-que-todo-funciona">Paso 7 (opcional) · Prueba que todo funciona</h3>
+<p>Con el editor ya abierto, doble clic en <strong><code>3-Probar-Edicion.bat</code></strong>, arrastra la carpeta de ComfyUI y después una imagen tuya de una persona o personaje con el pelo visible. Hace una edición de prueba ("pelo rojo", en modo Calidad a resolución 512), te dice cuánto tardó y si funcionó. El resultado queda en <code>ComfyForPanas\referencia\resultado_prueba.png</code>.</p>
+<hr />
+<h2 id="4-instalación-con-tarjeta-amd-radeon">4. Instalación con tarjeta AMD Radeon</h2>
+<p>El ComfyUI oficial todavía no cubre bien a todas las Radeon en Windows (las RX 6000 quedan fuera del portable oficial). Por eso se usa <strong><code>comfyui-rocm</code></strong>, una versión de la comunidad con instalador automático que soporta RX 6000, 7000 y 9000. Es la misma del paquete anterior.</p>
+<blockquote>
+<p><strong>¿Ya instalaste el paquete anterior (Editor-Kontext)?</strong> Entonces ya tienes <code>comfyui-rocm</code>. Solo haz doble clic en <strong><code>comfyui-rocm-updater.bat</code></strong> (dentro de tu carpeta <code>comfyui-rocm</code>) para actualizarlo, y salta al <strong>Paso 4</strong>.</p>
+</blockquote>
+<h3 id="paso-1--instala-estos-programas-una-sola-vez">Paso 1 · Instala estos programas (una sola vez)</h3>
+<ol>
+<li><strong>Git</strong>: <a href="https://git-scm.com/download/win" target="_blank" rel="noopener">https://git-scm.com/download/win</a>. Opciones por defecto.</li>
+<li><strong>Visual C++ Runtime</strong>: <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe" target="_blank" rel="noopener">https://aka.ms/vs/17/release/vc_redist.x64.exe</a></li>
+<li><strong>Visual Studio Build Tools</strong>: <a href="https://aka.ms/vs/17/release/vs_BuildTools.exe" target="_blank" rel="noopener">https://aka.ms/vs/17/release/vs_BuildTools.exe</a>. En el instalador marca <strong>"Desarrollo para el escritorio con C++"</strong> e instala (pesa varios GB).</li>
+<li><strong>Driver AMD Adrenalin actualizado</strong>: <a href="https://www.amd.com/es/support/download/drivers.html" target="_blank" rel="noopener">https://www.amd.com/es/support/download/drivers.html</a></li>
+<li>Si tu procesador tiene <strong>gráficos integrados</strong> (muchos Ryzen terminados en G y los Ryzen 7000/9000), lo ideal es desactivarlos en la BIOS. Si no sabes cómo, sigue igual y mira la <a href="#8-problemas-y-soluciones">sección 8</a> si aparece un error "HIP".</li>
+</ol>
+<h3 id="paso-2--instala-comfyui-rocm">Paso 2 · Instala comfyui-rocm</h3>
+<ol>
+<li>Entra a <a href="https://github.com/patientx-cfz/comfyui-rocm/releases" target="_blank" rel="noopener">https://github.com/patientx-cfz/comfyui-rocm/releases</a>, abre la versión más reciente y baja <strong>"Source code (zip)"</strong>.</li>
+<li>Descomprímelo en la <strong>raíz de un disco</strong> y cambia el nombre de la carpeta a <strong><code>comfyui-rocm</code></strong> (ej. <code>C:\comfyui-rocm</code>). Sin tildes ni ñ, y no dentro de tu carpeta de usuario.</li>
+<li>Doble clic en <strong><code>install.bat</code></strong>. Descarga Python y PyTorch para tu Radeon; tarda un buen rato.</li>
+<li>Al terminar, doble clic una vez en <strong><code>comfyui-rocm-updater.bat</code></strong>.</li>
+</ol>
+<h3 id="paso-3--baja-comfyforpanas_1">Paso 3 · Baja ComfyForPanas</h3>
+<p>Igual que en NVIDIA (<a href="#paso-3--baja-comfyforpanas">sección 3, paso 3</a>): abre la raíz del disco (ej. <code>C:\</code>) en el Explorador, escribe <code>cmd</code> en la barra de direcciones, Enter, y pega:</p>
+<pre><code>git clone https://github.com/Trustday/ComfyForPanas
+</code></pre>
+<p>Te queda <code>C:\ComfyForPanas</code>. (Sin comandos: <strong>Code → Download ZIP</strong> en la página del repositorio, y <strong>Desbloquear</strong> el zip antes de descomprimirlo.)</p>
+<h3 id="paso-4--instala-el-editor_1">Paso 4 · Instala el editor</h3>
+<p>Doble clic en <strong><code>ComfyForPanas\scripts\1-Instalar-Nodos.bat</code></strong>, <strong>arrastra la carpeta <code>comfyui-rocm</code></strong> a la ventana, Enter, y escribe los GB de VRAM de tu tarjeta (ej. <code>12</code> para una RX 6700 XT, <code>16</code> para una RX 6800/7800 XT).</p>
+<p>En AMD, este paso además ajusta tu <code>comfyui-user.bat</code>:</p>
+<ul>
+<li>agrega la vista previa en vivo y un par de ajustes de memoria;</li>
+<li>pone el VAE en precisión completa (<code>--fp32-vae</code>), lo que evita imágenes negras o con ruido;</li>
+<li>quita <code>--cache-lru 20</code> del lanzador del fork, que mantiene los modelos ocupando la RAM. Sin esa opción, ComfyUI usa su caché normal y libera RAM cuando falta, algo clave con 16 GB.</li>
+</ul>
+<h3 id="paso-5--descarga-los-modelos">Paso 5 · Descarga los modelos</h3>
+<p>En AMD conviene usar <strong><code>4-Arreglo-AMD.bat</code></strong> en vez de <code>2-Descargar-Modelos.bat</code>: arrastra la carpeta <code>comfyui-rocm</code>, escribe los GB de VRAM y Enter. Hace dos cosas:</p>
+<ul>
+<li><strong>Baja los modelos con el tamaño justo para Radeon.</strong> El modo Rápido va con un Turbo de 4.2 GB en tarjetas de hasta 12 GB, para que quepa entero en la VRAM, y el codificador de texto va en "int8".</li>
+<li><strong>Repite los ajustes del paso 4.</strong></li>
+</ul>
+<p>Al terminar te dice cómo comprobar en la ventana de ComfyUI que el modelo cupo.</p>
+<h3 id="paso-6--úsalo_1">Paso 6 · ¡Úsalo!</h3>
+<p>Doble clic en <strong><code>C:\comfyui-rocm\Abrir-Editor-Qwen.bat</code></strong>. Abre ComfyUI (con tu <code>comfyui-user.bat</code>) en una ventana que <strong>no debes cerrar</strong>, y luego el editor en el navegador.</p>
+<blockquote>
+<p><strong>La primera edición en una Radeon puede tardar mucho más</strong> (varios minutos sin avance), porque la tarjeta prepara sus "cachés". Las siguientes son más rápidas. Después puedes usar <code>3-Probar-Edicion.bat</code> igual que en NVIDIA.</p>
+</blockquote>
+<details>
+<summary>Plan B para AMD: ComfyUI oficial con ROCm 10 (solo Windows 11, más manual)</summary>
+<p>El README oficial de ComfyUI ya explica cómo usar las Radeon RX 6000 a 9000 en <strong>Windows 11</strong> con PyTorch de AMD (ROCm 10). Es una instalación manual con Python 3.13 (<code>git clone</code> de ComfyUI, un entorno de Python y un comando <code>pip</code>): <a href="https://github.com/comfyanonymous/ComfyUI#amd-gpus-windows-rocm-100" target="_blank" rel="noopener">https://github.com/comfyanonymous/ComfyUI#amd-gpus-windows-rocm-100</a>. Los scripts de este paquete también funcionan con esa instalación si creas el entorno en una carpeta <code>venv</code> dentro de ComfyUI. No lo probé.</p>
+</details>
+<hr />
+<h2 id="5-cómo-usar-el-editor">5. Cómo usar el editor</h2>
+<ol>
+<li><strong>Sube una imagen</strong>: clic en el recuadro, arrástrala a la ventana o pégala con <code>Ctrl + V</code>.</li>
+<li><strong>Escribe el cambio en inglés</strong> y presiona Enter (o <strong>Enviar</strong>). Abajo del cuadro ves la frase exacta que se envía; el editor le agrega solo <em>"Keep everything else unchanged."</em> si tú no lo escribes.</li>
+<li><strong>Espera</strong>: verás la imagen formándose en vivo, el paso actual y el tiempo restante. El botón <strong>⏹ Detener</strong> cancela.</li>
+<li><strong>El resultado pasa a ser la imagen que estás editando</strong>: escribe otro cambio y se aplica sobre él. Así encadenas ediciones.</li>
+</ol>
+<p><strong>⚡ Rápido / Calidad</strong> (junto al botón Enviar):</p>
+<ul>
+<li><strong>Rápido</strong> usa el modelo Turbo con 8 pasos y tarda unas 3 veces menos en dibujar. Úsalo para probar ideas y encadenar cambios.</li>
+<li><strong>Calidad</strong> usa el modelo normal con 25 pasos. Úsalo para la versión final, o si un resultado en Rápido no te convenció.</li>
+<li>El editor parte en Rápido si bajaste el modelo Turbo. Cada resultado indica con qué modo se hizo.</li>
+</ul>
+<p>En cada resultado tienes:</p>
+<table>
+<thead>
+<tr>
+<th>Botón</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>⇆ Comparar</strong></td>
+<td>Antes/después con una barra que arrastras.</td>
+</tr>
+<tr>
+<td><strong>⬇ Descargar</strong></td>
+<td>Guarda la imagen. (Igual quedan todas en la carpeta de ComfyUI: <code>output\EditorQwen</code>).</td>
+</tr>
+<tr>
+<td><strong>↻ Otra variante</strong></td>
+<td>Repite el mismo pedido con otra "semilla": sale distinto. Úsalo si no te gustó.</td>
+</tr>
+<tr>
+<td><strong>↳ Seguir desde aquí</strong></td>
+<td>Vuelve a una versión anterior y sigue desde ella. También puedes usar las miniaturas de abajo.</td>
+</tr>
+<tr>
+<td><strong>Usar sin proteger</strong></td>
+<td>Si la protección dejó algo raro (una mezcla extraña), toma la imagen tal como la hizo Qwen.</td>
+</tr>
+</tbody>
+</table>
+<p>La conversación queda guardada aunque cierres el navegador. <strong>＋ Nueva</strong> empieza con otra imagen.</p>
+<p><strong>Opciones (⚙):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Qué hace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Resolución</strong></td>
+<td><strong>1024</strong> = lo recomendado. <strong>768</strong> = cerca de la mitad del tiempo, con un poco menos de detalle (buena opción en tarjetas lentas). <strong>512</strong> = para probar ideas; pierde detalle (en caras pequeñas los gestos pueden no notarse).</td>
+</tr>
+<tr>
+<td><strong>Pasos</strong></td>
+<td>Solo para el modo Calidad: 25 es lo recomendado. El modo Rápido usa siempre 8.</td>
+</tr>
+<tr>
+<td><strong>Semilla</strong></td>
+<td>Vacía = al azar. Si pones un número, el mismo pedido da siempre el mismo resultado.</td>
+</tr>
+<tr>
+<td><strong>Umbral de protección</strong></td>
+<td>20 es lo probado. Más alto = se toma de Qwen una zona más chica.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cómo-pedir-las-cosas-en-inglés">Cómo pedir las cosas (en inglés)</h3>
+<p>¿No te manejas con el inglés? Escribe en Google Translate y pega la traducción. Funciona mejor <strong>un cambio por vez</strong>; después encadenas.</p>
+<table>
+<thead>
+<tr>
+<th>Quieres…</th>
+<th>Escribe, por ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cambiar la ropa</td>
+<td><code>Change her outfit to a plain white t-shirt and blue jeans</code></td>
+</tr>
+<tr>
+<td>Cambiar el fondo</td>
+<td><code>Change the background to a sandy beach at sunset</code></td>
+</tr>
+<tr>
+<td>Una pose</td>
+<td><code>Make her cross her arms over her chest</code></td>
+</tr>
+<tr>
+<td>Una expresión</td>
+<td><code>Make her smile happily</code> · <code>Make her look surprised</code></td>
+</tr>
+<tr>
+<td>Un accesorio</td>
+<td><code>Put a red baseball cap on her head</code> · <code>Put black sunglasses on her</code></td>
+</tr>
+<tr>
+<td>El pelo</td>
+<td><code>Change her hair color to red</code> · <code>Make her hair long</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Consejos:</strong></p>
+<ul>
+<li><strong>Sé concreto:</strong> color, tipo de prenda y detalles. "A traditional red kimono with wide sleeves" sale mejor que "kimono".</li>
+<li><strong>Di dónde va un accesorio:</strong> "a thin silver necklace <strong>over her shirt collar</strong>". Si no, puede que cambie la ropa para mostrarlo.</li>
+<li><strong>Para ropa nueva usa "Change her outfit to…"</strong>, que reemplaza. Con "add…" la pone encima.</li>
+<li><strong>Si un resultado no te gusta, prueba ↻ Otra variante</strong> antes de reescribir el pedido.</li>
+</ul>
+<h3 id="proteger-lo-que-no-cambió-siempre-activo">Proteger lo que no cambió (siempre activo)</h3>
+<p>Qwen redibuja toda la imagen, así que la cara o el fondo pueden moverse un poquito aunque no lo pidas. El editor compara el resultado con tu imagen, detecta <strong>solo la zona que de verdad cambió</strong> y pega esa zona sobre tu original, con el borde suavizado. Todo lo demás queda <strong>idéntico</strong>, y el resultado sale del mismo tamaño que tu imagen. En gestos y accesorios toma también los alrededores del cambio, para que la cara quede coherente. En cada resultado ves qué porcentaje de la imagen se tomó de Qwen ("zona editada").</p>
+<p>En nuestras pruebas (ropa, fondo, pose, expresión y accesorios), fuera de la zona editada la imagen quedó prácticamente igual al original: una diferencia media de 0.1 sobre 255 o menos. Sin la protección, la cara y el fondo se movían entre 5 y 7.</p>
+<hr />
+<h2 id="6-qué-esperar-según-tu-tarjeta">6. Qué esperar según tu tarjeta</h2>
+<table>
+<thead>
+<tr>
+<th>VRAM</th>
+<th>Funciona</th>
+<th>Tiempo por edición (1024, modo Calidad)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8 GB (GTX 1070, RTX 3060 Ti/3070, RX 6600)</td>
+<td>Sí. Parte del modelo queda en la RAM.</td>
+<td>≈ 9–10 min en la GTX 1070 (<strong>medido</strong>); una RTX 3070 debería ser bastante más rápida</td>
+</tr>
+<tr>
+<td>12 GB (RTX 3060 12 GB, RTX 4070, RX 6700 XT)</td>
+<td>Sí</td>
+<td>RX 6700 XT: ≈ 18 min (35 s por paso), <strong>medido por un usuario antes de los ajustes de AMD de este paquete</strong>; RTX sin medir</td>
+</tr>
+<tr>
+<td>16 GB o más (RTX 4080/5080, RX 6800/7800 XT o superior)</td>
+<td>Sí, el modelo cabe entero</td>
+<td>sin medir</td>
+</tr>
+<tr>
+<td>6 GB o menos</td>
+<td>Quizás, con un modelo más chico (<code>-Cuantizacion Q5_K_M</code>, ver sección 8) y resolución 768 o 512</td>
+<td>sin probar</td>
+</tr>
+</tbody>
+</table>
+<p><strong>El modo Rápido</strong> debería reducir la parte de dibujo a cerca de un tercio (8 pasos en vez de 25). <strong>La resolución 768</strong> la reduce aproximadamente a la mitad. Se pueden combinar.</p>
+<p>Siempre: <strong>la primera edición de cada sesión tarda más</strong>, porque carga los modelos. La versión "int8" del codificador de texto (la que se baja con 16 GB de RAM o con AMD) da el mismo resultado.</p>
+<hr />
+<h2 id="7-extra-usarlo-dentro-de-comfyui">7. Extra: usarlo dentro de ComfyUI</h2>
+<p>Si te interesa ver el "motor": con ComfyUI abierto, entra a <a href="http://127.0.0.1:8188" target="_blank" rel="noopener">http://127.0.0.1:8188</a>, menú <strong>Workflows → Qwen21-Editar-GGUF</strong>. Ahí está el mismo proceso en nodos, con una nota de uso. Eliges la imagen, escribes la instrucción y presionas <strong>Ejecutar</strong>.</p>
+<hr />
+<h2 id="8-problemas-y-soluciones">8. Problemas y soluciones</h2>
+<table>
+<thead>
+<tr>
+<th>Lo que pasa</th>
+<th>Qué hacer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>El editor dice <strong>"ComfyUI no responde"</strong></td>
+<td>La ventana negra de ComfyUI se cerró o todavía está cargando. Vuelve a abrir <code>Abrir-Editor-Qwen.bat</code> y espera.</td>
+</tr>
+<tr>
+<td>El editor dice <strong>"Faltan nodos"</strong> o <strong>"Falta: …"</strong></td>
+<td>Faltan nodos → vuelve a correr <code>1-Instalar-Nodos.bat</code> y reinicia ComfyUI (cierra la ventana negra y abre <code>Abrir-Editor-Qwen.bat</code>). Faltan modelos → corre <code>2-Descargar-Modelos.bat</code>.</td>
+</tr>
+<tr>
+<td><code>1-Instalar-Nodos</code> dice <strong>"Tu ComfyUI es 0.xx y necesita 0.37"</strong></td>
+<td>NVIDIA: baja de nuevo el portable (paso 2) o ejecuta <code>update\update_comfyui.bat</code>. AMD: ejecuta <code>comfyui-rocm-updater.bat</code>.</td>
+</tr>
+<tr>
+<td><strong>"Falta Git"</strong></td>
+<td>Instala Git (paso 1), cierra la ventana y vuelve a intentar.</td>
+</tr>
+<tr>
+<td>Windows dice <strong>"Windows protegió su PC"</strong></td>
+<td><strong>Más información → Ejecutar de todas formas.</strong> Si bajaste el zip, para que no vuelva a salir: desbloquéalo antes de descomprimirlo (paso 3). Con <code>git clone</code> no pasa.</td>
+</tr>
+<tr>
+<td><code>Actualizar.bat</code> dice que <strong>archivos de ComfyForPanas se modificaron en este PC</strong></td>
+<td>Alguien editó un archivo del paquete (por ejemplo, abrió un <code>.bat</code> con el Bloc de notas y guardó). Escribe <code>S</code> para volver a la versión oficial y seguir, o Enter para cancelar sin tocar nada. Tus imágenes y tus modelos no se tocan.</td>
+</tr>
+<tr>
+<td><code>Actualizar.bat</code> dice <strong>"No pude bajar los cambios"</strong></td>
+<td>Revisa internet y vuelve a intentar. Si sigue: borra la carpeta <code>ComfyForPanas</code> y bájala de nuevo (paso 3); después corre <code>Actualizar.bat</code>, que te pide la carpeta de ComfyUI una vez.</td>
+</tr>
+<tr>
+<td>ComfyUI <strong>no arranca</strong> (NVIDIA) y la ventana menciona CUDA o driver</td>
+<td>Actualiza el driver de NVIDIA. Si tu tarjeta es GTX 10 o más antigua, necesitas el portable <strong><code>cu126</code></strong> (paso 2).</td>
+</tr>
+<tr>
+<td><strong>Muy lento</strong>, o algunos pasos tardan 5 a 10 veces más que otros</td>
+<td>VRAM justa. Cierra programas que usen la tarjeta (juegos, Wallpaper Engine, grabadores, otras pestañas con video). Si sigue, vuelve a correr <code>1-Instalar-Nodos.bat</code> e indica <strong>menos</strong> VRAM de la que tienes, para que reserve más.</td>
+</tr>
+<tr>
+<td>Error <strong>"out of memory"</strong> / se queda sin memoria</td>
+<td>Baja la resolución a 768 o 512 en Opciones. Si no basta, usa un modelo más chico: abre PowerShell en la carpeta <code>scripts</code> y ejecuta <code>.\Descargar-Modelos.ps1 -Ruta "C:\IA\ComfyUI_windows_portable" -Cuantizacion Q6_K</code> (o <code>Q5_K_M</code>). Después borra el <code>qwen-image-2.1-Q8_0.gguf</code> para que el editor use el nuevo.</td>
+</tr>
+<tr>
+<td>Con <strong>16 GB de RAM</strong> el PC se pone muy lento</td>
+<td>Asegúrate de usar el codificador <code>int8</code> (el script lo elige solo con menos de 31 GB de RAM). Cierra el navegador con muchas pestañas y otros programas pesados.</td>
+</tr>
+<tr>
+<td><strong>El resultado salió casi igual</strong></td>
+<td>El pedido era muy vago, o la resolución 512 no alcanzó para un gesto pequeño. Usa 1024, sé más concreto o prueba ↻ Otra variante.</td>
+</tr>
+<tr>
+<td><strong>El resultado tiene una mezcla rara</strong> (por ejemplo, media cara cambiada)</td>
+<td>Usa <strong>"Usar sin proteger"</strong> en ese resultado, o súbele el umbral de protección en Opciones.</td>
+</tr>
+<tr>
+<td>En la ventana de ComfyUI sale <strong>"This model is not currently supported"</strong></td>
+<td>El parche de ComfyUI-GGUF no quedó aplicado. Vuelve a correr <code>1-Instalar-Nodos.bat</code> y reinicia ComfyUI. Si actualizaste ComfyUI-GGUF por tu cuenta, repítelo.</td>
+</tr>
+<tr>
+<td><strong>AMD:</strong> error <code>HIP error: invalid kernel file</code></td>
+<td>Está usando los gráficos integrados del procesador. Desactívalos en la BIOS, o abre <code>comfyui-user.bat</code> con el Bloc de notas, busca la línea <code>:: set HIP_VISIBLE_DEVICES=1</code> y bórrale los <code>::</code> del comienzo (si no está, agrega <code>set HIP_VISIBLE_DEVICES=1</code> justo debajo de la línea <code>set "PARAMS=...</code> que agregó el paquete).</td>
+</tr>
+<tr>
+<td><strong>AMD:</strong> la primera edición tarda muchísimo</td>
+<td>Es normal en Radeon: la tarjeta prepara sus cachés. Las siguientes son más rápidas.</td>
+</tr>
+<tr>
+<td><strong>AMD: todas las ediciones son lentas</strong> (más de 30 s por paso, mirando el paso 2 o 3; el 1 incluye preparar la tarjeta)</td>
+<td>1) Corre <strong><code>4-Arreglo-AMD.bat</code></strong>: baja un modelo Rápido de 4.2 GB que cabe en la tarjeta, ajusta la RAM y deja más VRAM libre para que no se desborde. 2) Usa el modo <strong>⚡ Rápido</strong> y la resolución <strong>768</strong> (o 512 para probar). 3) Cierra otros programas que usen la tarjeta o mucha RAM. 4) Si sigue lento: cierra ComfyUI y corre <strong><code>5-Diagnostico.bat</code></strong>, que mide la tarjeta. Además, durante una edición mira en el Administrador de tareas → Rendimiento → GPU la <strong>"Memoria de GPU compartida"</strong>: si sube más de 1 GB, la VRAM se está desbordando a la RAM. Manda a quien te ayude <code>referencia\diagnostico.txt</code>, esa captura, la línea <code>loaded ...</code> y los segundos por paso.</td>
+</tr>
+<tr>
+<td><strong>AMD:</strong> imágenes negras o con ruido, o el editor dice <strong>"valores inválidos (NaN)"</strong></td>
+<td>El mensaje dice en qué parte falló y qué hacer. Lo más común es el VAE en media precisión. Pasos: 1) <strong>Abre ComfyUI siempre con <code>Abrir-Editor-Qwen.bat</code></strong>, no con <code>comfyui-rocm.bat</code>, para que arranque con <code>--fp32-vae</code>. 2) En las primeras líneas de la ventana negra, la que empieza con <code>starting with: [</code> debe incluir <code>fp32-vae</code>; si no, corre <code>4-Arreglo-AMD.bat</code>. 3) Si el error dice que falló <strong>al dibujar</strong>, prueba el otro modo (Rápido o Calidad); si solo falla uno, vuelve a bajar ese modelo.</td>
+</tr>
+<tr>
+<td><strong>AMD:</strong> cualquier otro error al instalar comfyui-rocm</td>
+<td>Revisa la guía del propio proyecto: <a href="https://github.com/patientx-cfz/comfyui-rocm" target="_blank" rel="noopener">https://github.com/patientx-cfz/comfyui-rocm</a> (y su <code>install.bat --debug</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>Si pides ayuda a alguien, mándale <strong>lo que dice la ventana negra de ComfyUI</strong> (las últimas líneas) y lo que dijo <code>3-Probar-Edicion.bat</code>.</p>
+<hr />
+<h2 id="9-qué-trae-comfyforpanas">9. Qué trae ComfyForPanas</h2>
+<pre><code>ComfyForPanas\
+├─ README.md / GUIA.html          esta guía (GUIA.html se abre en el navegador, con enlaces clicables)
+├─ Actualizar.bat                 baja la última versión y la instala en tu ComfyUI (NVIDIA y AMD)
+├─ LEEME-ARREGLO-AMD.txt          resumen del arreglo para Radeon lentas
+├─ scripts\
+│   ├─ 1-Instalar-Nodos.bat       instala el editor en tu ComfyUI y crea Abrir-Editor-Qwen.bat
+│   ├─ 2-Descargar-Modelos.bat    baja los modelos de Qwen-Image-2.1 (18 a 34 GB), reanuda si se corta y verifica cada archivo
+│   ├─ 3-Probar-Edicion.bat       edición de prueba: dice si todo funciona y cuánto tarda
+│   ├─ 4-Arreglo-AMD.bat          para Radeon: modo Rápido que cabe en la tarjeta, codificador liviano y ajustes de RAM
+│   ├─ 5-Diagnostico.bat          mide en segundos la tarjeta (cálculo, copia RAM -&gt; VRAM, memoria) y guarda un informe
+│   └─ (los usan los .bat)        Instalar-Nodos.ps1, Descargar-Modelos.ps1, Actualizar.ps1, Abrir-Editor-Qwen.bat,
+│                                 parchear_gguf.py, probar_edicion.py, diagnostico.py
+├─ nodos\
+│   ├─ ComfyUI-EditorQwen\        el editor web (se abre en http://127.0.0.1:8188/editor-qwen)
+│   └─ ComfyUI-ProtegerEdicion\   el nodo &quot;Proteger lo que no cambió&quot;
+├─ workflows\Qwen21-Editar-GGUF.json   el mismo proceso para usar dentro de ComfyUI
+├─ referencia\                    aquí quedan el resultado de la prueba y el informe del diagnóstico
+└─ herramientas\generar_guia.py   rehace GUIA.html a partir de README.md (solo para quien mantiene el repositorio)
+</code></pre>
+<p><code>1-Instalar-Nodos</code> guarda tu carpeta de ComfyUI y tu VRAM en <code>mi-instalacion.json</code>, así <code>Actualizar.bat</code> no te pregunta nada. Ese archivo es de tu PC y no se sube a GitHub.</p>
+<p><strong>Modelos que se descargan</strong> (desde Hugging Face, sin cuenta):</p>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Carpeta</th>
+<th>Tamaño</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>qwen-image-2.1-Q8_0.gguf</code> (el modelo de edición, modo Calidad)</td>
+<td><code>models\diffusion_models</code></td>
+<td>7.6 GB</td>
+</tr>
+<tr>
+<td><code>qwen-image-2.1-turbo-Q8_0.gguf</code> (modo Rápido, opcional)</td>
+<td><code>models\diffusion_models</code></td>
+<td>7.6 GB</td>
+</tr>
+<tr>
+<td><code>qwen3vl_8b_bf16.safetensors</code> (codificador de texto; con 16 GB de RAM o AMD: <code>qwen3vl_8b_int8_convrot.safetensors</code>, 9.4 GB)</td>
+<td><code>models\text_encoders</code></td>
+<td>17.5 GB</td>
+</tr>
+<tr>
+<td><code>qwen_image_2.1_vae_bf16.safetensors</code></td>
+<td><code>models\vae</code></td>
+<td>0.7 GB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Detalles técnicos</strong> (para quien le interese):</p>
+<ul>
+<li><strong>Qué instala <code>1-Instalar-Nodos</code>:</strong> el nodo <code>ComfyUI-GGUF</code> de city96, fijado en la versión probada (<code>6ea2651</code>), con un pequeño parche que le enseña a reconocer Qwen-Image-2.1. El GGUF de unsloth no trae los datos que ese nodo usa para identificar el modelo.</li>
+<li><strong>Qué hace la protección:</strong> compara la salida de Qwen con tu imagen a 256 px y arma una máscara de la zona que cambió. Sobre ella:
+  1. cierra la máscara (rellena huecos y une partes cercanas);
+  2. descarta motas de ruido;
+  3. en ediciones locales (menos del 5 % de la imagen) amplía la zona a su vecindario;
+  4. agrega un borde suave y pega esa zona sobre tu original.</li>
+<li><strong>Con qué opciones arranca ComfyUI el lanzador:</strong> <code>--preview-method auto</code> (vista previa en vivo) y <code>--reserve-vram</code> (deja memoria de video libre para Windows). En AMD, además:</li>
+<li><code>--disable-async-offload</code>;</li>
+<li><code>--fp32-vae</code> (evita NaN en el VAE);</li>
+<li>quita <code>--cache-lru 20</code> del lanzador del fork, para que ComfyUI use su caché por presión de RAM.</li>
+<li><strong>Por qué AMD iba lento:</strong> en RDNA 2 el modelo ya se calcula en fp32 (el log dice <code>manual cast: torch.float32</code>). El problema es la memoria:</li>
+<li>con el Q8_0 a 1024 solo cabe parte del modelo en la VRAM (en la 6600 XT, 2.6 GB de 7.5) y el resto se copia en cada paso;</li>
+<li>el fork desactiva la memoria fijada (<code>--disable-pinned-memory</code>), que es la que acelera esas copias;</li>
+<li>con 16 GB de RAM y <code>--cache-lru</code> el modelo termina leyéndose del disco.</li>
+</ul>
+<p>Por eso <code>4-Arreglo-AMD</code> usa un Turbo Q4_K_M (4.2 GB) en tarjetas de hasta 12 GB, y el editor parte en 768 en Radeon.
+- <strong>Modo Rápido:</strong> usa <code>qwen-image-2.1-turbo</code> con el muestreo de la plantilla oficial de ComfyUI: CFG 1, euler, 8 pasos con sigmas fijos (<code>1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0</code>).
+- <strong>Sin acceso remoto:</strong> el editor se sirve desde el mismo ComfyUI, así que no hace falta abrir ComfyUI a otras páginas (CORS).</p>
+<hr />
+<h2 id="10-licencia-y-créditos">10. Licencia y créditos</h2>
+<ul>
+<li><strong>Qwen-Image-2.1</strong> (Alibaba Qwen) se distribuye con la <em>Qwen Research License</em>: <strong>uso personal y de investigación, no comercial</strong>. Si quieres usar las imágenes con fines comerciales, revisa la licencia en <a href="https://huggingface.co/Qwen/Qwen-Image-2.1" target="_blank" rel="noopener">https://huggingface.co/Qwen/Qwen-Image-2.1</a>.</li>
+<li>Cuantización GGUF: <a href="https://huggingface.co/unsloth/Qwen-Image-2.1-GGUF" target="_blank" rel="noopener">unsloth/Qwen-Image-2.1-GGUF</a> · archivos para ComfyUI: <a href="https://huggingface.co/Comfy-Org/Qwen-Image-2.1" target="_blank" rel="noopener">Comfy-Org/Qwen-Image-2.1</a></li>
+<li><a href="https://github.com/comfyanonymous/ComfyUI" target="_blank" rel="noopener">ComfyUI</a> · <a href="https://github.com/city96/ComfyUI-GGUF" target="_blank" rel="noopener">ComfyUI-GGUF</a> (city96) · <a href="https://github.com/patientx-cfz/comfyui-rocm" target="_blank" rel="noopener">comfyui-rocm</a> (patientx)</li>
+<li>Ranking de modelos de edición: <a href="https://artificialanalysis.ai/image/leaderboard/editing/open-weights" target="_blank" rel="noopener">Artificial Analysis, Image Editing (open weights)</a></li>
+</ul>
+<hr />
+<h2 id="11-actualizar">11. Actualizar</h2>
+<p><strong>Es el mismo archivo para NVIDIA y AMD.</strong> Doble clic en <strong><code>ComfyForPanas\Actualizar.bat</code></strong>:</p>
+<ol>
+<li>Baja los cambios nuevos y te muestra la lista de qué cambió.</li>
+<li>Vuelve a instalar el editor y la protección en tu ComfyUI. Usa la carpeta y la VRAM que indicaste en <code>1-Instalar-Nodos</code> (la primera vez, si no las tiene, te las pregunta). En AMD vuelve a dejar bien los ajustes de <code>comfyui-user.bat</code>.</li>
+<li>Si ComfyUI estaba abierto, ciérralo y ábrelo de nuevo con <strong><code>Abrir-Editor-Qwen.bat</code></strong>. Si el editor estaba abierto en el navegador, recarga la página con <code>F5</code>.</li>
+</ol>
+<p>No toca tus modelos, tus imágenes ni tu ComfyUI (solo los nodos del editor). Si un cambio necesita un modelo nuevo, la lista de cambios lo dice y te indica qué archivo correr.</p>
+<h3 id="si-tenías-el-paquete-anterior-en-zip-editorqwen-paquete">Si tenías el paquete anterior en zip (<code>EditorQwen-Paquete</code>)</h3>
+<ol>
+<li>Cierra la ventana negra de ComfyUI.</li>
+<li>Baja ComfyForPanas (paso 3 de tu sección: <a href="#3-instalación-con-tarjeta-nvidia">NVIDIA</a> o <a href="#4-instalación-con-tarjeta-amd-radeon">AMD</a>) y haz doble clic en <strong><code>Actualizar.bat</code></strong>. Te pide una vez la carpeta de ComfyUI y la VRAM.</li>
+<li><strong>Si aún no tenías el modo Rápido:</strong>
+   - <strong>AMD:</strong> doble clic en <strong><code>scripts\4-Arreglo-AMD.bat</code></strong>. Arrastra tu carpeta <code>comfyui-rocm</code>, escribe los GB de VRAM y presiona Enter. Baja el modelo Turbo del tamaño justo y al final te dice qué revisar.
+   - <strong>NVIDIA:</strong> doble clic en <strong><code>scripts\2-Descargar-Modelos.bat</code></strong> y presiona Enter cuando pregunte por el modo Rápido. Lo que ya tenías no se vuelve a bajar.</li>
+<li>Ya puedes borrar la carpeta <code>EditorQwen-Paquete</code> vieja.</li>
+</ol>
+<p>En AMD, si tenías el codificador grande (<code>qwen3vl_8b_bf16.safetensors</code>, 17.5 GB), después puedes borrarlo: el editor ahora usa el "int8".</p>
+</main>
+<script>
+document.querySelectorAll('pre').forEach(function(pre){
+  var b=document.createElement('button'); b.className='copy'; b.textContent='Copiar';
+  b.onclick=function(){ navigator.clipboard.writeText(pre.innerText.replace(/Copiar$/,'').trim()).then(function(){b.textContent='Copiado';setTimeout(function(){b.textContent='Copiar'},1400)}); };
+  pre.appendChild(b);
+});
+</script></body></html>

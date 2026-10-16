@@ -1,0 +1,4 @@
+Aqui quedan los archivos que crean las pruebas:
+  resultado_prueba.png  -> 3-Probar-Edicion.bat
+  diagnostico.txt       -> 5-Diagnostico.bat
+No se suben a GitHub.

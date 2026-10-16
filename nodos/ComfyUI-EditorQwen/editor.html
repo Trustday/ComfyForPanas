@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor Qwen</title>
+<style>
+  :root{
+    --bg:#131418; --panel:#1c1e24; --panel2:#24272f; --line:#30343e; --text:#e8e9ec; --muted:#9aa0ab;
+    --accent:#7aa2ff; --accent2:#5b86f0; --user:#2b3550; --ok:#4cc38a; --warn:#e5b84b; --err:#ef6b6b;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f4f5f8; --panel:#ffffff; --panel2:#eef0f4; --line:#dcdfe6; --text:#1d2027; --muted:#646b78;
+      --accent:#3d6ae0; --accent2:#2f58c8; --user:#dde6fb; }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+  button{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover:not(:disabled){background:var(--accent2)}
+  button.small{padding:4px 9px;font-size:13px;border-radius:8px}
+  a{color:var(--accent)}
+  a button{color:var(--text)}
+  .hidden{display:none!important}
+
+  header{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .brand{font-weight:650;font-size:17px}
+  .brand small{font-weight:400;color:var(--muted);margin-left:6px;font-size:13px}
+  #status{margin-left:auto;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  #status::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--warn)}
+  #status.ok::before{background:var(--ok)} #status.bad::before{background:var(--err)}
+
+  #chat{flex:1;overflow-y:auto;padding:22px 16px 10px}
+  .wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+  .msg{display:flex}
+  .msg.user{justify-content:flex-end}
+  .bubble{max-width:min(620px,92%);border-radius:var(--radius);padding:10px 14px;background:var(--panel);border:1px solid var(--line)}
+  .msg.user .bubble{background:var(--user);border-color:transparent}
+  .bubble .sent{font-size:12px;color:var(--muted);margin-top:4px}
+  .thumb{max-width:220px;max-height:260px;border-radius:10px;display:block}
+  .result img.main{max-width:100%;max-height:70vh;border-radius:10px;display:block;cursor:zoom-in;background:var(--panel2)}
+  .meta{font-size:12.5px;color:var(--muted);margin:8px 0 6px;display:flex;flex-wrap:wrap;gap:4px 12px}
+  .tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+  .tag.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+  .acts{display:flex;flex-wrap:wrap;gap:6px}
+  .err{border-color:var(--err)!important;color:var(--err)}
+
+  .progress .pv{width:min(420px,100%);aspect-ratio:2/3;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:13px;text-align:center;padding:10px}
+  .progress .pv img{width:100%;height:100%;object-fit:contain}
+  .bar{height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;margin:10px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+  .phase{font-size:13.5px}
+  .phase small{color:var(--muted)}
+
+  #empty{max-width:860px;margin:6vh auto 0;border:2px dashed var(--line);border-radius:18px;padding:46px 20px;text-align:center;color:var(--muted);cursor:pointer}
+  #empty b{color:var(--text);font-size:18px;display:block;margin-bottom:6px}
+  body.drag #empty, body.drag #chat{outline:2px dashed var(--accent);outline-offset:-8px}
+
+  footer{border-top:1px solid var(--line);background:var(--panel);padding:10px 16px 12px}
+  .composer{max-width:860px;margin:0 auto}
+  .strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;align-items:center}
+  .strip span{font-size:13px;color:var(--muted);margin-right:4px;white-space:nowrap}
+  .strip img{height:52px;border-radius:6px;cursor:pointer;opacity:.7;border:2px solid transparent;flex:none}
+  .strip img:hover{opacity:1}
+  .strip img.cur{opacity:1;border-color:var(--accent)}
+  #base{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-bottom:8px}
+  #base img{height:44px;border-radius:6px}
+  .row{display:flex;gap:8px;align-items:flex-end}
+  textarea{flex:1;resize:none;min-height:44px;max-height:180px;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .row button{height:44px}
+  .modo{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
+  .modo button{border:0;border-radius:0;height:42px;padding:0 11px;font-size:13.5px;background:var(--panel2)}
+  .modo button.on{background:var(--accent);color:#fff}
+  .modo button:disabled{opacity:.35}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chips button{font-size:12.5px;padding:3px 10px;border-radius:20px;color:var(--muted)}
+  #final{font-size:12px;color:var(--muted);margin-top:6px;min-height:1em}
+
+  #opts{position:fixed;right:16px;top:58px;width:330px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #opts h3{margin:0 0 10px;font-size:15px}
+  #opts label{display:block;font-size:13px;margin:10px 0 4px;color:var(--muted)}
+  #opts select,#opts input[type=number]{width:100%;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  #opts .chk{display:flex;gap:8px;align-items:flex-start;color:var(--text)}
+  #opts .hint{font-size:12px;color:var(--muted);margin-top:3px}
+
+  #viewer{position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px}
+  .cmp{position:relative;max-width:96vw;max-height:84vh;user-select:none;touch-action:none}
+  .cmp img{display:block;max-width:96vw;max-height:84vh}
+  .cmp img.before{position:absolute;inset:0;width:100%;height:100%;clip-path:inset(0 50% 0 0)}
+  .cmp .handle{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;box-shadow:0 0 6px #000;cursor:ew-resize}
+  .cmp .lbl{position:absolute;top:8px;font-size:12px;background:rgba(0,0,0,.6);color:#fff;padding:2px 8px;border-radius:10px}
+  #viewer .bar2{display:flex;gap:8px;color:#fff;align-items:center;flex-wrap:wrap;justify-content:center}
+  #viewer button{background:#2a2d35;color:#fff;border-color:#444}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Editor Qwen <small>Qwen-Image-2.1 · edición por instrucciones</small></div>
+  <div id="status">Conectando…</div>
+  <button id="btnOpts" title="Opciones">⚙ Opciones</button>
+  <button id="btnNew" title="Empezar con otra imagen">＋ Nueva</button>
+</header>
+
+<div id="chat">
+  <div id="empty"><b>Sube una imagen para empezar</b>Haz clic aquí, arrástrala a la ventana o pégala con Ctrl+V.<br>Luego escribe qué quieres cambiar (en inglés) y sigue editando el resultado las veces que quieras.</div>
+  <div class="wrap" id="msgs"></div>
+</div>
+
+<footer>
+  <div class="composer">
+    <div id="strip" class="strip hidden" title="Historial de versiones: haz clic en una para seguir editando desde ella"></div>
+    <div id="base" class="hidden"><img alt=""><span></span></div>
+    <div class="row">
+      <button id="btnAttach" title="Subir otra imagen (empieza desde ella)" aria-label="Subir imagen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
+      <textarea id="prompt" rows="1" placeholder="Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”"></textarea>
+      <div class="modo" id="modo" title="Rápido = modelo Turbo, 8 pasos (unas 3 veces más rápido). Calidad = modelo normal, 25 pasos.">
+        <button data-m="turbo">⚡ Rápido</button><button data-m="calidad">Calidad</button>
+      </div>
+      <button id="btnSend" class="primary" disabled>Enviar</button>
+    </div>
+    <div id="final"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <input type="file" id="file" accept="image/*" hidden>
+</footer>
+
+<div id="opts" class="hidden">
+  <h3>Opciones</h3>
+  <label for="optRes">Resolución de trabajo</label>
+  <select id="optRes">
+    <option value="1024">1024 · calidad (recomendado)</option>
+    <option value="768">768 · intermedio (≈ la mitad de tiempo)</option>
+    <option value="512">512 · para probar ideas (pierde detalle)</option>
+    <option value="0">Tamaño de tu imagen (múltiplo de 32)</option>
+  </select>
+  <div class="hint">El resultado siempre vuelve al tamaño de tu imagen.</div>
+  <label for="optSteps">Pasos (modo Calidad; el modo Rápido usa siempre 8)</label>
+  <input id="optSteps" type="number" min="4" max="60" value="25">
+  <label for="optSeed">Semilla (vacío = al azar)</label>
+  <input id="optSeed" type="number" min="0" placeholder="al azar">
+  <label for="optThr">Umbral de protección</label>
+  <input id="optThr" type="number" min="1" max="128" value="20">
+  <div class="hint">Más alto = se toma de Qwen una zona más chica. 20 es el valor probado.</div>
+  <label class="chk"><input type="checkbox" id="optKeep" checked> Agregar “Keep everything else unchanged.” si no lo escribes</label>
+  <div style="margin-top:12px;text-align:right"><button id="btnOptsClose" class="small">Cerrar</button></div>
+</div>
+
+<div id="viewer" class="hidden">
+  <div class="cmp" id="cmp">
+    <img id="vAfter" alt="después">
+    <img id="vBefore" class="before" alt="antes">
+    <div class="handle" id="vHandle"></div>
+    <span class="lbl" style="left:8px">Antes</span><span class="lbl" style="right:8px">Después</span>
+  </div>
+  <div class="bar2"><span id="vInfo"></span><button id="vToggle">Ver solo antes</button><a id="vDl" download><button>⬇ Descargar</button></a><button id="vClose">Cerrar (Esc)</button></div>
+</div>
+
+<script>
+'use strict';
+const API = location.protocol === 'file:' ? 'http://127.0.0.1:8189' : '';
+const STORE = 'editorQwen.v1';
+const EXAMPLES = [
+  'Change the background to a sandy beach at sunset',
+  'Change her outfit to a plain white t-shirt and blue jeans',
+  'Make her smile happily',
+  'Make her cross her arms over her chest',
+  'Put a red baseball cap on her head',
+  'Change her hair color to red',
+];
+const $ = s => document.querySelector(s);
+
+// ---------- estado (se guarda en localStorage) ----------
+let S = {cid: crypto.randomUUID(), msgs: [], base: null, nextV: 0, pending: null};
+try{ const s = JSON.parse(localStorage.getItem(STORE)); if(s && s.cid) S = Object.assign(S, s); }catch(e){}
+const save = () => { try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} };
+const versions = () => S.msgs.filter(m => m.ref && m.v !== undefined);
+const byV = v => versions().find(m => m.v === v);
+
+let models = null, busy = false, ws = null;
+let modo = null;   // 'turbo' (Rapido, 8 pasos) o 'calidad' (25 pasos); se elige al conocer los modelos
+try{ modo = (JSON.parse(localStorage.getItem(STORE + '.opts')) || {}).modo || null; }catch(e){}
+// sigmas del modo Turbo: los de la plantilla oficial de ComfyUI (image_qwen_image_2_1_turbo_image_edit)
+const TURBO_SIGMAS = '1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0';
+const view = (ref, bust) => `${API}/view?filename=${encodeURIComponent(ref.filename)}&subfolder=${encodeURIComponent(ref.subfolder||'')}&type=${ref.type}${bust?'&t='+Date.now():''}`;
+const loadName = ref => (ref.subfolder ? ref.subfolder + '/' : '') + ref.filename + ` [${ref.type}]`;
+const fmtT = s => s < 60 ? `${Math.round(s)} s` : `${Math.floor(s/60)} min ${String(Math.round(s%60)).padStart(2,'0')} s`;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------- conexión y modelos ----------
+async function getJSON(path, opt){ const r = await fetch(API + path, opt); if(!r.ok) throw new Error(`${path}: HTTP ${r.status}`); return r.json(); }
+function setStatus(text, cls){ const el = $('#status'); el.textContent = text; el.className = cls || ''; }
+async function checkServer(){
+  try{
+    const st = await getJSON('/system_stats');
+    const need = ['UnetLoaderGGUF','CLIPLoader','VAELoader','TextEncodeQwenImage21','QwenImage21Cache','ProtegerSinCambios'];
+    const info = {};
+    for(const n of need){ try{ Object.assign(info, await getJSON('/object_info/' + n)); }catch(e){} }
+    const miss = need.filter(n => !info[n]);
+    if(miss.length){ models = null; setStatus('Faltan nodos: ' + miss.join(', '), 'bad'); return; }
+    // listas desplegables: formato clasico [[...], {}] o nuevo ["COMBO", {options:[...]}]
+    const opts = spec => Array.isArray(spec[0]) ? spec[0] : ((spec[1] && spec[1].options) || []);
+    const pick = (node, inp, re) => opts(info[node].input.required[inp]).find(n => re.test(n));
+    const ggufs = opts(info.UnetLoaderGGUF.input.required.unet_name).filter(n => /qwen.?image.?2\.1.*\.gguf$/i.test(n));
+    const m = {
+      unet: ggufs.find(n => !/turbo/i.test(n)),     // modo Calidad
+      turbo: ggufs.find(n => /turbo/i.test(n)),     // modo Rapido
+      // si estan los dos codificadores se prefiere int8: mismo resultado, la mitad de tamano y carga mas rapido
+      clip: pick('CLIPLoader','clip_name',/qwen3vl_8b_int8/i) || pick('CLIPLoader','clip_name',/qwen3vl_8b/i),
+      vae: pick('VAELoader','vae_name',/qwen_image_2\.1_vae/i),
+    };
+    const missM = [];
+    if(!m.unet && !m.turbo) missM.push('modelo Qwen-Image-2.1 .gguf');
+    if(!m.clip) missM.push('qwen3vl_8b');
+    if(!m.vae) missM.push('VAE qwen_image_2.1');
+    if(missM.length){ models = null; setStatus('Falta: ' + missM.join(', '), 'bad'); return; }
+    // nodo que dice en que parte salieron valores invalidos (NaN); si ComfyUI aun no lo cargo, se edita sin el
+    try{ m.verificar = !!(await getJSON('/object_info/VerificarValores')).VerificarValores; }catch(e){ m.verificar = false; }
+    models = m;
+    if(!m.turbo && modo === 'turbo') modo = 'calidad';
+    if(!m.unet && modo === 'calidad') modo = 'turbo';
+    if(!modo) modo = m.turbo ? 'turbo' : 'calidad';
+    const dev = st.devices && st.devices[0];
+    const gpu = dev ? dev.name.replace(/^cuda:\d+\s*/,'').replace(/\s*:.*$/,'') + ` (${Math.round(dev.vram_total/2**30)} GB)` : '';
+    // en Radeon, la primera vez se parte en 768: el modelo cabe mejor en la VRAM y cada paso tarda cerca de la mitad
+    if(dev && /AMD|Radeon/i.test(dev.name) && !localStorage.getItem(STORE + '.amd768')){
+      $('#optRes').value = '768'; guardarOpts();
+      try{ localStorage.setItem(STORE + '.amd768', '1'); }catch(e){}
+    }
+    const modos = [m.turbo && 'Rápido', m.unet && 'Calidad'].filter(Boolean).join(' + ');
+    setStatus(`Listo · Qwen-Image-2.1 (${modos}) · ${gpu}`, 'ok');
+  }catch(e){ models = null; setStatus('ComfyUI no responde en ' + (API || location.host), 'bad'); }
+  refreshComposer();
+}
+
+function openWS(){
+  const url = (API ? API.replace(/^http/,'ws') : location.origin.replace(/^http/,'ws')) + '/ws?clientId=' + S.cid;
+  ws = new WebSocket(url);
+  ws.binaryType = 'arraybuffer';
+  ws.onmessage = ev => {
+    if(typeof ev.data !== 'string'){
+      const dv = new DataView(ev.data);
+      if(dv.getUint32(0) === 1 && job){ const type = dv.getUint32(4) === 2 ? 'image/png' : 'image/jpeg'; job.preview(new Blob([ev.data.slice(8)], {type})); }
+      return;
+    }
+    const m = JSON.parse(ev.data);
+    if(job && m.data && m.data.prompt_id === job.id) job.event(m.type, m.data);
+  };
+  ws.onclose = () => setTimeout(openWS, 2000);
+}
+
+// ---------- render ----------
+let stick = true;   // seguir el final del chat mientras cargan las imagenes (salvo que el usuario suba)
+const toBottom = () => { if(stick) $('#chat').scrollTop = $('#chat').scrollHeight; };
+$('#chat').addEventListener('scroll', () => { const c = $('#chat'); stick = c.scrollHeight - c.scrollTop - c.clientHeight < 80; });
+function stickImg(img, src){ img.addEventListener('load', toBottom); img.src = src; }
+function setBase(v){
+  if(busy) return;
+  S.base = v; save(); render();
+  const m = document.querySelector(`.msg[data-v="${v}"]`); if(m){ stick = false; m.scrollIntoView({block:'center', behavior:'smooth'}); }
+  $('#prompt').focus();
+}
+function render(){
+  $('#empty').classList.toggle('hidden', S.msgs.length > 0);
+  const box = $('#msgs'); box.innerHTML = '';
+  for(const m of S.msgs) box.appendChild(renderMsg(m));
+  if(S.pending) box.appendChild(job ? job.el : pendingPlaceholder());
+  const strip = $('#strip'); strip.innerHTML = '';
+  const lbl = document.createElement('span'); lbl.textContent = S.base !== null ? `Editando v${S.base} ·` : ''; strip.appendChild(lbl);
+  for(const m of versions()){
+    const i = document.createElement('img'); i.src = view(m.ref); i.title = `v${m.v}` + (m.kind === 'upload' ? ' · imagen subida' : ' · ' + (m.text || ''));
+    if(S.base === m.v) i.className = 'cur';
+    i.onclick = () => setBase(m.v); strip.appendChild(i);
+  }
+  strip.classList.toggle('hidden', versions().length < 2);
+  refreshComposer();
+  stick = true; toBottom();
+}
+function el(html){ const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+function renderMsg(m){
+  if(m.kind === 'upload'){
+    const cur = S.base === m.v;
+    const e = el(`<div class="msg user" data-v="${m.v}"><div class="bubble"><img class="thumb" alt=""><div class="sent">Imagen subida · v${m.v} · ${m.w}×${m.h} ${cur ? '· <b>editando esta</b>' : '<button class="small" data-a="cont">↳ Seguir desde aquí</button>'}</div></div></div>`);
+    stickImg(e.querySelector('img'), view(m.ref));
+    const c = e.querySelector('[data-a=cont]'); if(c) c.onclick = () => setBase(m.v);
+    return e;
+  }
+  if(m.kind === 'prompt'){
+    const sent = m.sent !== m.text ? `<div class="sent">Enviado: ${esc(m.sent)}</div>` : '';
+    return el(`<div class="msg user"><div class="bubble">${esc(m.text)}<div class="sent">sobre v${m.from}</div>${sent}</div></div>`);
+  }
+  if(m.kind === 'error') return el(`<div class="msg"><div class="bubble err">${esc(m.text)}</div></div>`);
+  if(m.kind === 'result'){
+    const cur = S.base === m.v;
+    const info = m.rawOf !== undefined ? `<span>versión sin proteger de v${m.rawOf}</span>`
+      : `<span>${fmtT(m.secs)}</span><span>semilla ${m.seed}</span><span>${m.res === 0 ? 'tamaño original' : m.res + ' px'} · ${m.modo === 'turbo' ? '⚡ Rápido (8 pasos)' : 'Calidad (' + m.steps + ' pasos)'}</span><span class="zone"></span>`;
+    const e = el(`<div class="msg" data-v="${m.v}"><div class="bubble result">
+      <img class="main" alt="resultado">
+      <div class="meta"><span class="tag ${cur?'cur':''}">v${m.v}${cur?' · editando esta':''}</span>${info}</div>
+      <div class="acts">
+        <button class="small" data-a="cont" ${cur?'disabled':''}>↳ Seguir desde aquí</button>
+        <button class="small" data-a="cmp">⇆ Comparar con v${m.from}</button>
+        <a href="${view(m.ref)}" download="editor_qwen_v${m.v}.png"><button class="small">⬇ Descargar</button></a>
+        ${m.raw && m.rawOf === undefined ? '<button class="small" data-a="raw" title="Si la protección dejó algo raro: sigue desde la salida directa de Qwen">Usar sin proteger</button>' : ''}
+        <button class="small" data-a="redo" title="Repite la misma instrucción sobre v${m.from} con otra semilla">↻ Otra variante</button>
+      </div></div></div>`);
+    stickImg(e.querySelector('img.main'), view(m.ref));
+    e.querySelector('img.main').onclick = () => openViewer(m);
+    e.querySelector('[data-a=cont]').onclick = () => setBase(m.v);
+    e.querySelector('[data-a=cmp]').onclick = () => openViewer(m);
+    const raw = e.querySelector('[data-a=raw]'); if(raw) raw.onclick = () => useRaw(m);
+    e.querySelector('[data-a=redo]').onclick = () => { if(busy) return; S.base = m.from; send(m.text, true); };
+    zoneInfo(m, e.querySelector('.zone'));
+    return e;
+  }
+  return el('<div></div>');
+}
+function pendingPlaceholder(){ return el(`<div class="msg"><div class="bubble progress"><div class="phase">Reconectando con la edición en curso…</div></div></div>`); }
+async function zoneInfo(m, span){
+  if(!m.zone) return;
+  try{
+    const img = new Image(); img.crossOrigin = 'anonymous'; img.src = view(m.zone);
+    await img.decode();
+    const c = document.createElement('canvas'), w = c.width = 128, h = c.height = Math.max(1, Math.round(128*img.height/img.width));
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data; let n = 0;
+    for(let i=0;i<d.length;i+=4) if(d[i] > 128) n++;
+    const pct = Math.round(100*n/(w*h));
+    if(pct >= 99){ span.textContent = 'sin zona clara: salida directa de Qwen'; span.title = 'No se detectó un cambio localizado (o cambió toda la imagen), así que no se protegió nada'; }
+    else { span.textContent = `zona editada ${pct} %`; span.title = 'Parte de la imagen que se tomó de Qwen; el resto es idéntico a la versión anterior'; }
+  }catch(e){}
+}
+function refreshComposer(){
+  const b = S.base !== null ? byV(S.base) : null;
+  $('#base').classList.toggle('hidden', !b || versions().length > 1);
+  if(b){ $('#base img').src = view(b.ref); $('#base span').textContent = `Editando v${b.v}` + (b.kind === 'upload' ? ' (imagen original)' : ''); }
+  $('#btnSend').disabled = !models || !b || busy || !$('#prompt').value.trim();
+  $('#btnAttach').disabled = busy;
+  $('#btnSend').textContent = busy ? 'Generando…' : 'Enviar';
+  $('#final').textContent = $('#prompt').value.trim() ? 'Se enviará: ' + finalPrompt($('#prompt').value) : '';
+  for(const bt of document.querySelectorAll('#modo button')){
+    const disponible = models && (bt.dataset.m === 'turbo' ? models.turbo : models.unet);
+    bt.disabled = !disponible || busy;
+    bt.classList.toggle('on', bt.dataset.m === modo);
+    bt.title = disponible ? '' : (bt.dataset.m === 'turbo' ? 'Falta el modelo Turbo: bájalo con 2-Descargar-Modelos.bat' : 'Falta el modelo normal (qwen-image-2.1-Q8_0.gguf)');
+  }
+}
+
+// ---------- subir imagen ----------
+async function uploadFile(file){
+  if(busy) return;
+  if(!file || !file.type.startsWith('image/')) return;
+  const fd = new FormData();
+  fd.append('image', file, file.name || 'pegada.png'); fd.append('subfolder', 'EditorQwen'); fd.append('type', 'input');
+  try{
+    const r = await getJSON('/upload/image', {method:'POST', body:fd});
+    const ref = {filename: r.name, subfolder: r.subfolder || '', type: r.type || 'input'};
+    const img = new Image(); img.src = view(ref); await img.decode();
+    const v = S.nextV++;
+    S.msgs.push({kind:'upload', v, ref, w: img.naturalWidth, h: img.naturalHeight});
+    if(img.naturalWidth * img.naturalHeight > 2.5e6)
+      S.msgs.push({kind:'error', text:`Aviso: la imagen es grande (${img.naturalWidth}×${img.naturalHeight}). Qwen trabaja a la resolución de Opciones y el resultado se escala de vuelta; funciona, pero conviene una imagen de ~1-2 MP.`});
+    S.base = v; save(); render(); $('#prompt').focus();
+  }catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la imagen: ' + e.message}); save(); render(); }
+}
+
+// ---------- generar ----------
+const opt = () => ({res: +$('#optRes').value, steps: Math.max(1, +$('#optSteps').value || 25), seed: $('#optSeed').value === '' ? null : +$('#optSeed').value, thr: Math.max(1, +$('#optThr').value || 20), keep: $('#optKeep').checked, modo});
+function finalPrompt(text){
+  let t = text.trim().replace(/\s+/g, ' ');
+  if(t && !/[.!?]$/.test(t)) t += '.';
+  if(opt().keep && t && !/\bkeep\b|\bunchanged\b/i.test(t)) t += ' Keep everything else unchanged.';
+  return t;
+}
+function buildGraph(image, prompt, o, seed){
+  const turbo = o.modo === 'turbo';
+  const g = {
+    '1': {class_type:'LoadImage', inputs:{image}},
+    '2': {class_type:'UnetLoaderGGUF', inputs:{unet_name: turbo ? models.turbo : models.unet}},
+    '3': {class_type:'QwenImage21Cache', inputs:{model:['2',0], device:'auto', dtype:'default'}},
+    '4': {class_type:'CLIPLoader', inputs:{clip_name: models.clip, type:'qwen_image', device:'default'}},
+    '5': {class_type:'VAELoader', inputs:{vae_name: models.vae}},
+    '6': {class_type:'TextEncodeQwenImage21', inputs:{clip:['4',0], prompt, negative_prompt:'', resolution:o.res, 'images.image_1':['1',0], vae:['5',0]}},
+    '7': turbo
+      ? {class_type:'SamplerCustomAdvanced', inputs:{noise:['20',0], guider:['21',0], sampler:['22',0], sigmas:['23',0], latent_image:['6',2]}}
+      : {class_type:'KSampler', inputs:{model:['3',0], positive:['6',0], negative:['6',1], latent_image:['6',2], seed, steps:o.steps, cfg:1, sampler_name:'euler', scheduler:'simple', denoise:1}},
+    '8': {class_type:'VAEDecode', inputs:{samples:[models.verificar ? '16' : '7', 0], vae:['5',0]}},
+    '12': {class_type:'ProtegerSinCambios', inputs:{original:['1',0], editada:['8',0], umbral:o.thr}},
+    '9': {class_type:'SaveImage', inputs:{images:['12',0], filename_prefix:'EditorQwen/edit'}},
+    '13': {class_type:'SaveImage', inputs:{images:['8',0], filename_prefix:'EditorQwen/sin_proteger'}},
+    '15': {class_type:'MaskToImage', inputs:{mask:['12',1]}},
+    '14': {class_type:'SaveImage', inputs:{images:['15',0], filename_prefix:'EditorQwen/zona'}},
+  };
+  if(models.verificar) g['16'] = {class_type:'VerificarValores', inputs:{samples:['7',0], positive:['6',0]}};
+  if(turbo){   // mismo muestreo que la plantilla oficial Turbo: CFG 1, euler, 8 pasos con sigmas fijos
+    g['20'] = {class_type:'RandomNoise', inputs:{noise_seed: seed}};
+    g['21'] = {class_type:'CFGGuider', inputs:{model:['3',0], positive:['6',0], negative:['6',1], cfg:1}};
+    g['22'] = {class_type:'KSamplerSelect', inputs:{sampler_name:'euler'}};
+    g['23'] = {class_type:'ManualSigmas', inputs:{sigmas: TURBO_SIGMAS}};
+  }
+  return g;
+}
+
+let job = null;
+async function send(text, isRedo){
+  text = (text || '').trim();
+  if(!text || busy || !models || S.base === null) return;
+  const base = byV(S.base), o = opt();
+  const seed = o.seed !== null ? o.seed : Math.floor(Math.random() * 2**48);
+  const sent = finalPrompt(text);
+  S.msgs.push({kind:'prompt', text: isRedo ? text + '  (otra variante)' : text, sent, from: base.v});
+  if(!isRedo) $('#prompt').value = '';
+  autosize(); save(); render();
+  let r;
+  try{
+    r = await fetch(API + '/prompt', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: buildGraph(loadName(base.ref), sent, o, seed), client_id: S.cid})});
+    const j = await r.json();
+    if(!r.ok || !j.prompt_id){
+      const ne = j.node_errors ? Object.values(j.node_errors).map(x => x.errors.map(e => e.details || e.message).join('; ')).join(' | ') : '';
+      throw new Error((j.error && j.error.message || 'ComfyUI rechazó el trabajo') + (ne ? ': ' + ne : ''));
+    }
+    S.pending = {id: j.prompt_id, from: base.v, text, seed, o, t0: Date.now()}; save();
+    startJob(S.pending);
+  }catch(e){ S.msgs.push({kind:'error', text: 'No se pudo enviar: ' + e.message}); save(); render(); }
+}
+
+function startJob(p){
+  busy = true;
+  const e = el(`<div class="msg"><div class="bubble progress">
+      <div class="pv">La vista previa aparece cuando empieza a dibujar</div>
+      <div class="bar"><i></i></div>
+      <div class="phase">En cola…</div>
+      <div class="acts" style="margin-top:8px"><button class="small" data-a="stop">⏹ Detener</button></div>
+    </div></div>`);
+  const phase = e.querySelector('.phase'), bar = e.querySelector('.bar>i'), pv = e.querySelector('.pv');
+  let label = 'En cola…', steps = [], stepTxt = '', lastUrl = null;
+  const tick = () => { phase.innerHTML = `${label} <small>· ${fmtT((Date.now()-p.t0)/1000)}</small>${stepTxt ? '<br><small>' + stepTxt + '</small>' : ''}`; };
+  const timer = setInterval(tick, 1000);
+  const labels = {'1':'Cargando la imagen…','2':'Cargando el modelo…','4':'Cargando el codificador de texto…','5':'Cargando el VAE…',
+    '6':'Leyendo la imagen y la instrucción…','7':'Dibujando…','8':'Decodificando…','12':'Protegiendo lo que no cambió…','9':'Guardando…','13':'Guardando…'};
+  job = {id: p.id, el: e,
+    preview(blob){ if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = URL.createObjectURL(blob); pv.innerHTML = ''; const i = new Image(); i.src = lastUrl; pv.appendChild(i); },
+    event(type, d){
+      if(type === 'execution_start') label = 'Preparando…';
+      if(type === 'executing' && d.node && labels[d.node]) label = labels[d.node];
+      if(type === 'progress' && d.node === '7'){
+        label = labels['7'];
+        steps.push(Date.now());
+        const done = d.value, tot = d.max;
+        bar.style.width = (100*done/tot).toFixed(1) + '%';
+        const iv = steps.slice(-6); let sp = null;
+        if(iv.length >= 3) sp = (iv[iv.length-1] - iv[0]) / (iv.length-1) / 1000;
+        stepTxt = `paso ${done}/${tot}` + (sp ? ` · ${sp.toFixed(1)} s/paso · faltan ≈ ${fmtT(sp*(tot-done))}` : '');
+      }
+      tick();
+    }};
+  e.querySelector('[data-a=stop]').onclick = async () => {
+    e.querySelector('[data-a=stop]').disabled = true; label = 'Deteniendo…'; tick();
+    try{ await fetch(API + '/queue', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({delete:[p.id]})}); }catch(_){}
+    try{ await fetch(API + '/interrupt', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt_id: p.id})}); }catch(_){}
+  };
+  tick(); render();
+  const poll = async () => {
+    let h = null;
+    try{ h = (await getJSON('/history/' + p.id))[p.id]; }catch(_){}
+    if(!h){
+      try{ const q = await getJSON('/queue'); const inQ = [...q.queue_running, ...q.queue_pending].some(x => x[1] === p.id);
+        if(!inQ){ const h2 = (await getJSON('/history/' + p.id))[p.id]; if(!h2) return finish(null, 'La edición ya no está en la cola de ComfyUI (¿se reinició?).'); h = h2; } }catch(_){}
+      if(!h) return setTimeout(poll, 2500);
+    }
+    const st = h.status || {};
+    if(st.status_str === 'success'){
+      const img = k => h.outputs[k] && h.outputs[k].images && h.outputs[k].images[0];
+      const out = img('9'), raw = img('13'), zone = img('14');
+      if(!out) return finish(null, 'ComfyUI terminó pero no devolvió imagen.');
+      const tag = r => r && {filename:r.filename, subfolder:r.subfolder||'', type:r.type};
+      return finish({ref: tag(out), raw: tag(raw), zone: tag(zone)});
+    }
+    const errMsg = (st.messages || []).find(x => x[0] === 'execution_error');
+    const interrupted = (st.messages || []).some(x => x[0] === 'execution_interrupted');
+    finish(null, interrupted ? 'Detenido.' : 'Error en ComfyUI' + (errMsg ? `: ${errMsg[1].node_type} — ${errMsg[1].exception_message}` : ''));
+  };
+  const finish = (res, err) => {
+    clearInterval(timer); if(lastUrl) URL.revokeObjectURL(lastUrl);
+    const secs = (Date.now() - p.t0) / 1000;
+    if(res){ const v = S.nextV++; S.msgs.push(Object.assign({kind:'result', v, from:p.from, text:p.text, seed:p.seed, res:p.o.res, steps:p.o.steps, modo:p.o.modo, secs}, res)); S.base = v; }
+    else S.msgs.push({kind:'error', text: err});
+    S.pending = null; job = null; busy = false; save(); render();
+  };
+  setTimeout(poll, 2500);
+}
+
+async function useRaw(m){
+  if(!m.raw) return;
+  const v = S.nextV++;
+  S.msgs.push({kind:'result', v, from:m.from, text:m.text, seed:m.seed, res:m.res, steps:m.steps, modo:m.modo, secs:0, ref:m.raw, raw:m.raw, zone:null, rawOf:m.v});
+  S.base = v; save(); render();
+}
+
+// ---------- visor antes/después ----------
+let vPos = 50, vOnlyBefore = false;
+function openViewer(m){
+  const prev = byV(m.from);
+  $('#vAfter').src = view(m.ref); $('#vBefore').src = prev ? view(prev.ref) : view(m.ref);
+  $('#vInfo').textContent = `v${m.from} → v${m.v}`;
+  $('#vDl').href = view(m.ref); $('#vDl').download = `editor_qwen_v${m.v}.png`;
+  vPos = 50; vOnlyBefore = false; setV(); $('#viewer').classList.remove('hidden');
+}
+function setV(){
+  const p = vOnlyBefore ? 100 : vPos;
+  $('#vBefore').style.clipPath = `inset(0 ${100-p}% 0 0)`; $('#vHandle').style.left = p + '%';
+  $('#vToggle').textContent = vOnlyBefore ? 'Volver al comparador' : 'Ver solo antes';
+}
+$('#cmp').addEventListener('pointerdown', ev => {
+  const r = $('#cmp').getBoundingClientRect();
+  const mv = e => { vPos = Math.min(100, Math.max(0, 100*(e.clientX - r.left)/r.width)); vOnlyBefore = false; setV(); };
+  mv(ev); $('#cmp').setPointerCapture(ev.pointerId);
+  $('#cmp').onpointermove = mv; $('#cmp').onpointerup = () => { $('#cmp').onpointermove = null; };
+});
+$('#vToggle').onclick = () => { vOnlyBefore = !vOnlyBefore; setV(); };
+$('#vClose').onclick = () => $('#viewer').classList.add('hidden');
+$('#viewer').onclick = ev => { if(ev.target.id === 'viewer') $('#viewer').classList.add('hidden'); };
+
+// ---------- eventos ----------
+function autosize(){ const t = $('#prompt'); t.style.height = 'auto'; t.style.height = Math.min(180, t.scrollHeight) + 'px'; refreshComposer(); }
+$('#prompt').addEventListener('input', autosize);
+$('#prompt').addEventListener('keydown', ev => { if(ev.key === 'Enter' && !ev.shiftKey){ ev.preventDefault(); send($('#prompt').value); } });
+$('#btnSend').onclick = () => send($('#prompt').value);
+$('#btnAttach').onclick = () => $('#file').click();
+$('#empty').onclick = () => $('#file').click();
+$('#file').onchange = () => { uploadFile($('#file').files[0]); $('#file').value = ''; };
+document.addEventListener('paste', ev => { const f = [...(ev.clipboardData||{}).files||[]].find(f => f.type.startsWith('image/')); if(f){ ev.preventDefault(); uploadFile(f); } });
+document.addEventListener('dragover', ev => { ev.preventDefault(); document.body.classList.add('drag'); });
+document.addEventListener('dragleave', ev => { if(!ev.relatedTarget) document.body.classList.remove('drag'); });
+document.addEventListener('drop', ev => { ev.preventDefault(); document.body.classList.remove('drag'); const f = [...ev.dataTransfer.files].find(f => f.type.startsWith('image/')); if(f) uploadFile(f); });
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape'){ $('#viewer').classList.add('hidden'); $('#opts').classList.add('hidden'); } });
+$('#btnOpts').onclick = () => $('#opts').classList.toggle('hidden');
+$('#btnOptsClose').onclick = () => $('#opts').classList.add('hidden');
+const guardarOpts = () => { try{ localStorage.setItem(STORE + '.opts', JSON.stringify(opt())); }catch(e){} };
+for(const bt of document.querySelectorAll('#modo button')) bt.onclick = () => { modo = bt.dataset.m; guardarOpts(); refreshComposer(); };
+for(const id of ['#optRes','#optSteps','#optSeed','#optThr','#optKeep']){
+  $(id).addEventListener('change', () => { guardarOpts(); refreshComposer(); });
+}
+try{ const o = JSON.parse(localStorage.getItem(STORE + '.opts')); if(o){ $('#optRes').value = o.res; $('#optSteps').value = o.steps; $('#optSeed').value = o.seed ?? ''; $('#optThr').value = o.thr; $('#optKeep').checked = o.keep; } }catch(e){}
+$('#btnNew').onclick = () => {
+  if(busy){ alert('Espera a que termine (o detén) la edición en curso.'); return; }
+  if(S.msgs.length && !confirm('¿Empezar una conversación nueva? Las imágenes siguen guardadas en ComfyUI/output/EditorQwen.')) return;
+  S = {cid: S.cid, msgs: [], base: null, nextV: 0, pending: null}; save(); render();
+};
+for(const t of EXAMPLES){ const b = document.createElement('button'); b.textContent = t; b.onclick = () => { $('#prompt').value = t; autosize(); $('#prompt').focus(); }; $('#chips').appendChild(b); }
+
+openWS();
+render();
+checkServer();
+setInterval(() => { if(!busy) checkServer(); }, 15000);
+if(S.pending) startJob(S.pending);
+</script>
+</body>
+</html>
