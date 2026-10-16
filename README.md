@@ -468,7 +468,7 @@ Quédate con la primera versión que ya se parece y todavía obedece la descripc
 
 **Qué está probado:**
 
-- **GTX 1070 de 8 GB:** con kohya `690ea7f` y torch 2.8.0 cu126, una prueba de 20 pasos usó 7.2 GB de VRAM y tardó unos 7 s por paso a 1024. Un entrenamiento completo (1400 pasos) se probó solo hasta el paso 110, sin errores.
+- **GTX 1070 de 8 GB:** con kohya `690ea7f` y torch 2.8.0 cu126, `7-Entrenar-LoRA` con `-Prueba` funcionó de punta a punta: paquete, configuración, 20 pasos y LoRA guardado. Usó unos 7.7 GB de VRAM y tardó unos 7.5 s por paso a 1024. Un entrenamiento completo (1400 pasos) se probó solo hasta el paso 110, sin errores.
 - **Todavía no se comprobó:** la calidad del LoRA, es decir, qué época conviene.
 - **RTX 30/40:** no se probaron. El script usa bf16 en esas tarjetas.
 

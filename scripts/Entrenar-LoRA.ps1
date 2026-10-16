@@ -246,12 +246,13 @@ Write-Host ("Entrenando {0} pasos. Referencia: una GTX 1070 tarda ~7 s por paso 
 Write-Host 'Primero prepara el cache de las imagenes (unos minutos). No cierres esta ventana; el PC no se suspendera mientras entrena.' -ForegroundColor Cyan
 Write-Host ''
 Add-Type -Name Energia -Namespace EntrenarLoRA -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);'
-[void][EntrenarLoRA.Energia]::SetThreadExecutionState(0x80000001)   # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: sin suspension por inactividad
+# ES_CONTINUOUS | ES_SYSTEM_REQUIRED (0x80000001): sin suspension por inactividad. En decimal: PowerShell 5.1 lee 0x80000001 como negativo
+[void][EntrenarLoRA.Energia]::SetThreadExecutionState([uint32]2147483649)
 Push-Location $sd
 & $py sdxl_train_network.py --config_file "$final" --console_log_file "$log"
 $res = $LASTEXITCODE
 Pop-Location
-[void][EntrenarLoRA.Energia]::SetThreadExecutionState(0x80000000)
+[void][EntrenarLoRA.Energia]::SetThreadExecutionState([uint32]2147483648)   # ES_CONTINUOUS: vuelve a lo normal
 if ($res -ne 0) { Falla "El entrenamiento se detuvo con error (codigo $res). El detalle queda en $log." }
 
 # ---------- 7. resultado ----------
