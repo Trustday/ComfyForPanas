@@ -726,7 +726,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 </ol>
 <p><strong>¿Tu tarjeta aguantará?</strong> En PowerShell, <code>.\Entrenar-LoRA.ps1 -Paquete "ruta\del\paquete.zip" -Prueba</code> entrena solo 20 pasos y muestra cuántos segundos tarda cada uno.</p>
 <h3 id="paso-4--elige-la-mejor-versión">Paso 4 · Elige la mejor versión</h3>
-<p>En el editor, en <strong>🎨 Generar</strong>, elige el LoRA en <strong>⚙ Opciones → 🎨 Generar</strong> y escribe la palabra clave al inicio de la descripción. Dentro de ComfyUI se usa con el nodo <code>LoraLoaderModelOnly</code>, entre el modelo y el KSampler. Compara las versiones (por ejemplo las épocas 4, 6, 8 y 10) con <strong>la misma semilla y la misma descripción</strong>, y también sin el LoRA:</p>
+<p>El LoRA se usa con Illustrious, no con Qwen. Dentro de ComfyUI, carga <code>Illustrious-XL-v1.1</code> con <code>Load Checkpoint</code>, agrega el nodo <code>LoraLoaderModelOnly</code> entre el modelo y el KSampler, y escribe la palabra clave al inicio del prompt. Cuando el editor tenga el modo <strong>🎨 Generar</strong>, también se elegirá ahí, en <strong>⚙ Opciones → 🎨 Generar</strong>. Compara las versiones (por ejemplo las épocas 4, 6, 8 y 10) con <strong>la misma semilla y la misma descripción</strong>, y también sin el LoRA:</p>
 <ul>
 <li><strong>Si le falta:</strong> no se parece al personaje.</li>
 <li><strong>Si se pasó:</strong> siempre sale con la misma pose, ropa o fondo, o la imagen se ve "quemada".</li>

@@ -459,7 +459,7 @@ Cada imagen recibe un `.txt` con la palabra clave y lo que se ve en ella (ropa, 
 
 ### Paso 4 · Elige la mejor versión
 
-En el editor, en **🎨 Generar**, elige el LoRA en **⚙ Opciones → 🎨 Generar** y escribe la palabra clave al inicio de la descripción. Dentro de ComfyUI se usa con el nodo `LoraLoaderModelOnly`, entre el modelo y el KSampler. Compara las versiones (por ejemplo las épocas 4, 6, 8 y 10) con **la misma semilla y la misma descripción**, y también sin el LoRA:
+El LoRA se usa con Illustrious, no con Qwen. Dentro de ComfyUI, carga `Illustrious-XL-v1.1` con `Load Checkpoint`, agrega el nodo `LoraLoaderModelOnly` entre el modelo y el KSampler, y escribe la palabra clave al inicio del prompt. Cuando el editor tenga el modo **🎨 Generar**, también se elegirá ahí, en **⚙ Opciones → 🎨 Generar**. Compara las versiones (por ejemplo las épocas 4, 6, 8 y 10) con **la misma semilla y la misma descripción**, y también sin el LoRA:
 
 - **Si le falta:** no se parece al personaje.
 - **Si se pasó:** siempre sale con la misma pose, ropa o fondo, o la imagen se ve "quemada".
