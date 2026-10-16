@@ -17,7 +17,13 @@ import torchvision.transforms.functional as TF
 
 import comfy.model_management
 import comfy.utils
+import nodes
 from comfy.cli_args import args
+
+try:
+    import comfy.memory_management as memoria
+except ImportError:  # ComfyUI antiguo, sin memoria dinamica (DynamicVRAM)
+    memoria = None
 
 MIN_ZONA = 6     # pixeles (a 256 px): zonas mas chicas son ruido
 LOCAL = 0.05       # fraccion de la imagen bajo la cual una edicion se considera local
@@ -61,14 +67,27 @@ def change_mask(orig, edit, umbral):
 
 def _ayuda_vae():
     if args.fp32_vae:
-        return ("ComfyUI ya usa el VAE en precision completa (--fp32-vae), asi que no deberia pasar: prueba otra vez con "
-                "otra variante y, si se repite, manda la ventana de ComfyUI completa a quien te ayuda.")
+        return ("ComfyUI ya usa el VAE en precision completa (--fp32-vae). Cierra la ventana de ComfyUI, abrelo de nuevo con "
+                "Abrir-Editor-Qwen.bat (asi vuelve a leer los modelos del disco) y prueba otra vez; si se repite, manda la "
+                "ventana de ComfyUI completa a quien te ayuda.")
     return ("ComfyUI arranco SIN --fp32-vae (VAE en precision completa), que evita esto en tarjetas AMD. Cierra la ventana "
             "de ComfyUI y abrelo con Abrir-Editor-Qwen.bat (no con comfyui-rocm.bat). Si sigue, corre 4-Arreglo-AMD.bat.")
 
 
 def _sin_nan(t):
     return torch.isfinite(t).all().item()
+
+
+def _amd_dinamico():
+    # En Radeon con memoria dinamica (DynamicVRAM) un modelo que queda cargado en la tarjeta entre usos puede leer pesos
+    # danados y dar NaN, sobre todo si el VAE necesita mas memoria de la libre (Comfy-Org/ComfyUI#15452). Con todo
+    # recien cargado funciona: la primera edicion tras abrir ComfyUI sale bien.
+    return comfy.model_management.is_amd() and getattr(memoria, "aimdo_enabled", False)
+
+
+def _vaciar_vram():
+    comfy.model_management.unload_all_models()
+    comfy.model_management.soft_empty_cache()
 
 
 class VerificarValores:
@@ -84,18 +103,68 @@ class VerificarValores:
     DESCRIPTION = "Detiene la edicion con un mensaje claro si el texto, la imagen de referencia o el dibujo traen valores invalidos (NaN)."
 
     def verificar(self, samples, positive):
+        error = self._revisar(samples, positive)
+        if error:
+            if _amd_dinamico():
+                # el siguiente intento parte con los modelos recien cargados
+                _vaciar_vram()
+                error += (" (En tarjetas AMD a veces se dana un modelo que quedo cargado de la edicion anterior; ya se "
+                          "descargaron todos, asi que conviene intentar una vez mas igual.)")
+            raise RuntimeError(error)
+        return (samples,)
+
+    @staticmethod
+    def _revisar(samples, positive):
         for t, extra in positive:
             for ref in extra.get("reference_latents", None) or []:
                 if not _sin_nan(ref):
-                    raise RuntimeError("Tu imagen se dano al leerla con el VAE (valores invalidos, NaN). " + _ayuda_vae())
+                    return "Tu imagen se dano al leerla con el VAE (valores invalidos, NaN). " + _ayuda_vae()
             if not _sin_nan(t):
-                raise RuntimeError("El codificador de texto produjo valores invalidos (NaN). Prueba otra vez con otra variante; "
-                                   "si se repite, manda la ventana de ComfyUI completa a quien te ayuda.")
+                return ("El codificador de texto produjo valores invalidos (NaN). Prueba otra vez con otra variante; "
+                        "si se repite, manda la ventana de ComfyUI completa a quien te ayuda.")
         if not _sin_nan(samples["samples"]):
-            raise RuntimeError("El modelo de edicion produjo valores invalidos (NaN) mientras dibujaba. Prueba el otro modo "
-                               "(Rapido o Calidad); si solo falla uno, vuelve a bajar ese modelo con 2-Descargar-Modelos.bat "
-                               "(puede estar danado). Si fallan los dos, manda la ventana de ComfyUI completa a quien te ayuda.")
-        return (samples,)
+            return ("El modelo de edicion produjo valores invalidos (NaN) mientras dibujaba. Prueba el otro modo "
+                    "(Rapido o Calidad); si solo falla uno, vuelve a bajar ese modelo con 2-Descargar-Modelos.bat "
+                    "(puede estar danado). Si fallan los dos, manda la ventana de ComfyUI completa a quien te ayuda.")
+        return None
+
+
+class DecodificarSeguro:
+    """VAE Decode que no pierde la edicion si el VAE devuelve NaN: descarga los modelos y decodifica otra vez."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"samples": ("LATENT",), "vae": ("VAE",)}}
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "decodificar"
+    CATEGORY = "image/edicion"
+    DESCRIPTION = ("Como VAE Decode, pero si la imagen sale danada (NaN) descarga los modelos de la tarjeta y la decodifica "
+                   "otra vez (y si sigue, por partes) en vez de perder lo que el modelo ya dibujo.")
+
+    def decodificar(self, samples, vae):
+        amd = _amd_dinamico()
+        if amd:
+            # el VAE se carga limpio y con toda la VRAM libre, como en la primera edicion tras abrir ComfyUI
+            _vaciar_vram()
+        try:
+            img = nodes.VAEDecode().decode(vae, samples)[0]
+            if not _sin_nan(img[..., :3]):
+                logging.warning("[Editor Qwen] El VAE devolvio valores invalidos (NaN): se descargan los modelos y se decodifica otra vez.")
+                _vaciar_vram()
+                img = nodes.VAEDecode().decode(vae, samples)[0]
+            if not _sin_nan(img[..., :3]):
+                logging.warning("[Editor Qwen] Otra vez NaN: se decodifica por partes de 512 px.")
+                _vaciar_vram()
+                img = nodes.VAEDecodeTiled().decode(vae, samples, tile_size=512, overlap=64)[0]
+        finally:
+            if amd:
+                # la proxima edicion tambien parte con los modelos recien cargados
+                _vaciar_vram()
+        if not _sin_nan(img[..., :3]):
+            raise RuntimeError("La imagen se dano al decodificarla con el VAE (valores invalidos, NaN), incluso volviendo a "
+                               "cargarlo. " + _ayuda_vae())
+        return (img,)
 
 
 class ProtegerSinCambios:
@@ -139,5 +208,7 @@ if comfy.model_management.is_amd() and not args.fp32_vae:
     logging.warning("[Editor Qwen] Tarjeta AMD sin --fp32-vae: pueden salir imagenes negras o con ruido. "
                     "Abre ComfyUI con Abrir-Editor-Qwen.bat (o corre 4-Arreglo-AMD.bat).")
 
-NODE_CLASS_MAPPINGS = {"ProtegerSinCambios": ProtegerSinCambios, "VerificarValores": VerificarValores}
-NODE_DISPLAY_NAME_MAPPINGS = {"ProtegerSinCambios": "Proteger lo que no cambio", "VerificarValores": "Verificar valores (NaN)"}
+NODE_CLASS_MAPPINGS = {"ProtegerSinCambios": ProtegerSinCambios, "VerificarValores": VerificarValores,
+                       "DecodificarSeguro": DecodificarSeguro}
+NODE_DISPLAY_NAME_MAPPINGS = {"ProtegerSinCambios": "Proteger lo que no cambio", "VerificarValores": "Verificar valores (NaN)",
+                              "DecodificarSeguro": "VAE Decode con reintento (NaN)"}

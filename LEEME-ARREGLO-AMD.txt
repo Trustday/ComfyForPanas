@@ -53,5 +53,12 @@ Si sale el error "valores inválidos (NaN)":
   el texto, al dibujar o al decodificar) y qué hacer. Si se repite, manda ese mensaje y la
   ventana negra completa.
 
+Si la PRIMERA edición sale bien y las SIGUIENTES dan "valores inválidos (NaN)":
+  Es un error conocido de ComfyUI en Radeon (su memoria dinámica a veces daña un modelo que
+  queda cargado en la tarjeta entre ediciones). Pon al día con Actualizar.bat y reinicia
+  ComfyUI: ahora el editor descarga los modelos entre ediciones y, si el VAE igual da NaN,
+  vuelve a decodificar en vez de perder la edición. Si aun así pasa, cierra la ventana negra,
+  ábrela de nuevo con Abrir-Editor-Qwen.bat y manda la ventana completa.
+
 Nota: estos cambios todavía no se probaron en una Radeon; se armaron a partir de los
 registros de una RX 6600 XT y una RX 6700 XT.

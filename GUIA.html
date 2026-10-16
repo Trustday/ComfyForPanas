@@ -500,6 +500,10 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 <td>El mensaje dice en qué parte falló y qué hacer. Lo más común es el VAE en media precisión. Pasos: 1) <strong>Abre ComfyUI siempre con <code>Abrir-Editor-Qwen.bat</code></strong>, no con <code>comfyui-rocm.bat</code>, para que arranque con <code>--fp32-vae</code>. 2) En las primeras líneas de la ventana negra, la que empieza con <code>starting with: [</code> debe incluir <code>fp32-vae</code>; si no, corre <code>4-Arreglo-AMD.bat</code>. 3) Si el error dice que falló <strong>al dibujar</strong>, prueba el otro modo (Rápido o Calidad); si solo falla uno, vuelve a bajar ese modelo.</td>
 </tr>
 <tr>
+<td><strong>AMD:</strong> la <strong>primera</strong> edición sale bien y <strong>las siguientes</strong> dan "valores inválidos (NaN)"</td>
+<td>Es un error conocido de la memoria dinámica de ComfyUI en Radeon: un modelo que queda cargado en la tarjeta entre ediciones a veces se daña. Corre <strong><code>Actualizar.bat</code></strong> y reinicia ComfyUI: ahora el editor descarga los modelos de la tarjeta entre ediciones (cada una parte como la primera) y, si el VAE igual devuelve NaN, vuelve a decodificar en vez de perder la edición. Si aun así sale el error, cierra la ventana negra, abre de nuevo <code>Abrir-Editor-Qwen.bat</code> y manda la ventana completa a quien te ayuda.</td>
+</tr>
+<tr>
 <td><strong>AMD:</strong> cualquier otro error al instalar comfyui-rocm</td>
 <td>Revisa la guía del propio proyecto: <a href="https://github.com/patientx-cfz/comfyui-rocm" target="_blank" rel="noopener">https://github.com/patientx-cfz/comfyui-rocm</a> (y su <code>install.bat --debug</code>).</td>
 </tr>
@@ -578,6 +582,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 <li>con 16 GB de RAM y <code>--cache-lru</code> el modelo termina leyéndose del disco.</li>
 </ul>
 <p>Por eso <code>4-Arreglo-AMD</code> usa un Turbo Q4_K_M (4.2 GB) en tarjetas de hasta 12 GB, y el editor parte en 768 en Radeon.
+- <strong>NaN en AMD desde la segunda edición:</strong> con la memoria dinámica de ComfyUI (DynamicVRAM, el log dice <code>prepared for dynamic VRAM loading</code>), en Radeon un modelo que queda en la VRAM entre usos puede leer pesos dañados, sobre todo si el VAE necesita más memoria de la libre (<a href="https://github.com/Comfy-Org/ComfyUI/issues/15452" target="_blank" rel="noopener">Comfy-Org/ComfyUI#15452</a>). Por eso el editor decodifica con el nodo <code>DecodificarSeguro</code>: en AMD descarga todos los modelos antes y después de decodificar (cada edición parte como la primera) y, en cualquier tarjeta, si el VAE devuelve NaN lo vuelve a cargar y decodifica otra vez (y si sigue, por partes de 512 px), sin repetir el dibujo. <code>--disable-dynamic-vram</code> también lo evita, pero usa más RAM y no lo probé.
 - <strong>Modo Rápido:</strong> usa <code>qwen-image-2.1-turbo</code> con el muestreo de la plantilla oficial de ComfyUI: CFG 1, euler, 8 pasos con sigmas fijos (<code>1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0</code>).
 - <strong>Sin acceso remoto:</strong> el editor se sirve desde el mismo ComfyUI, así que no hace falta abrir ComfyUI a otras páginas (CORS).</p>
 <hr />

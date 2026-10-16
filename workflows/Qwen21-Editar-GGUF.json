@@ -304,7 +304,7 @@
   },
   {
    "id": 8,
-   "type": "VAEDecode",
+   "type": "DecodificarSeguro",
    "pos": [
     1220,
     540
@@ -339,7 +339,7 @@
     }
    ],
    "properties": {
-    "Node name for S&R": "VAEDecode"
+    "Node name for S&R": "DecodificarSeguro"
    },
    "widgets_values": null
   },

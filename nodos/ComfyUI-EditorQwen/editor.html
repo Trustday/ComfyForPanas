@@ -220,6 +220,8 @@ async function checkServer(){
     if(missM.length){ models = null; setStatus('Falta: ' + missM.join(', '), 'bad'); return; }
     // nodo que dice en que parte salieron valores invalidos (NaN); si ComfyUI aun no lo cargo, se edita sin el
     try{ m.verificar = !!(await getJSON('/object_info/VerificarValores')).VerificarValores; }catch(e){ m.verificar = false; }
+    // decodificar con reintento: si el VAE devuelve NaN (pasa en Radeon) lo vuelve a cargar en vez de perder la edicion
+    try{ m.seguro = !!(await getJSON('/object_info/DecodificarSeguro')).DecodificarSeguro; }catch(e){ m.seguro = false; }
     models = m;
     if(!m.turbo && modo === 'turbo') modo = 'calidad';
     if(!m.unet && modo === 'calidad') modo = 'turbo';
@@ -388,7 +390,7 @@ function buildGraph(image, prompt, o, seed){
     '7': turbo
       ? {class_type:'SamplerCustomAdvanced', inputs:{noise:['20',0], guider:['21',0], sampler:['22',0], sigmas:['23',0], latent_image:['6',2]}}
       : {class_type:'KSampler', inputs:{model:['3',0], positive:['6',0], negative:['6',1], latent_image:['6',2], seed, steps:o.steps, cfg:1, sampler_name:'euler', scheduler:'simple', denoise:1}},
-    '8': {class_type:'VAEDecode', inputs:{samples:[models.verificar ? '16' : '7', 0], vae:['5',0]}},
+    '8': {class_type: models.seguro ? 'DecodificarSeguro' : 'VAEDecode', inputs:{samples:[models.verificar ? '16' : '7', 0], vae:['5',0]}},
     '12': {class_type:'ProtegerSinCambios', inputs:{original:['1',0], editada:['8',0], umbral:o.thr}},
     '9': {class_type:'SaveImage', inputs:{images:['12',0], filename_prefix:'EditorQwen/edit'}},
     '13': {class_type:'SaveImage', inputs:{images:['8',0], filename_prefix:'EditorQwen/sin_proteger'}},
