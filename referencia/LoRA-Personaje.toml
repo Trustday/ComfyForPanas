@@ -1,0 +1,48 @@
+# Configuracion de un LoRA de personaje para Illustrious-XL v1.1 (kohya sd-scripts, sdxl_train_network.py).
+# La copia 8-Preparar-Paquete-LoRA dentro de cada paquete; 7-Entrenar-LoRA agrega las rutas de cada PC y la precision
+# de la tarjeta (bf16 en RTX 30 o mas nueva, fp16 en las anteriores). Probada en una GTX 1070 de 8 GB: ~7 s por paso.
+
+output_name = "PALABRA_CLAVE"
+caption_extension = ".txt"
+
+# imagenes: grupos por proporcion, sin agrandar las que miden menos de 1024
+resolution = "1024,1024"
+enable_bucket = true
+min_bucket_reso = 512
+max_bucket_reso = 1536
+bucket_reso_steps = 64
+bucket_no_upscale = true
+
+# LoRA chico y solo en la U-Net (lo que recomienda kohya para SDXL con 8 GB)
+network_module = "networks.lora"
+network_dim = 8
+network_alpha = 4
+network_train_unet_only = true
+
+# memoria: cache de las imagenes y del texto, gradient checkpointing, VAE en fp32
+cache_latents = true
+cache_latents_to_disk = true
+cache_text_encoder_outputs = true
+cache_text_encoder_outputs_to_disk = true
+gradient_checkpointing = true
+save_precision = "fp16"
+no_half_vae = true
+sdpa = true
+train_batch_size = 1
+max_data_loader_n_workers = 1
+persistent_data_loader_workers = true
+
+# optimizador
+optimizer_type = "Adafactor"
+optimizer_args = ["scale_parameter=False", "relative_step=False", "warmup_init=False"]
+learning_rate = 3e-4
+lr_scheduler = "constant_with_warmup"
+lr_warmup_steps = 50
+max_grad_norm = 1.0
+
+# duracion: ~140 pasos por epoca (las repeticiones de la carpeta img\N_... se calculan para eso), 10 epocas = ~1400 pasos.
+# Se guarda una version por epoca para elegir la mejor.
+max_train_epochs = 10
+save_every_n_epochs = 1
+save_model_as = "safetensors"
+seed = 42

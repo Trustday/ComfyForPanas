@@ -404,3 +404,81 @@ No toca tus modelos, tus imágenes ni tu ComfyUI (solo los nodos del editor). Si
 4. Ya puedes borrar la carpeta `EditorQwen-Paquete` vieja.
 
 En AMD, si tenías el codificador grande (`qwen3vl_8b_bf16.safetensors`, 17.5 GB), después puedes borrarlo: el editor ahora usa el "int8".
+
+---
+
+## 12. Entrenar el LoRA de un personaje (opcional)
+
+Illustrious no sabe dibujar a **tu** personaje: si lo describes con texto, cada imagen sale con otra cara. Para que salga siempre el mismo hace falta un **LoRA**, un archivo chico (unos 40 MB) que se entrena con 20 a 35 imágenes del personaje. Después lo eliges en el modo Generar y escribes su palabra clave en la descripción.
+
+El trabajo se divide en dos partes, que pueden hacer personas distintas:
+
+| Quién | Qué hace | Tarjeta | Tiempo |
+|---|---|---|---|
+| **Dueño del personaje** | Elige las imágenes, completa la plantilla y arma el paquete con `8-Preparar-Paquete-LoRA.bat` | Cualquiera (NVIDIA o AMD): el etiquetado usa el procesador | Una tarde la primera vez |
+| **Quien entrena** | Ejecuta `7-Entrenar-LoRA.bat` con el paquete | **NVIDIA con 8 GB o más** | GTX 1070: unas 2 h 45 min · RTX 30/40: unos 30 min (estimado) |
+
+> **El repositorio es público:** guarda las imágenes y los LoRAs de tus personajes **fuera** de la carpeta ComfyForPanas.
+
+### Paso 1 · Junta las imágenes (dueño del personaje)
+
+1. Crea una carpeta para el personaje, por ejemplo `D:\lora\Aiko\`, y copia ahí sus mejores imágenes. Si tiene varios peinados puedes separarlos en subcarpetas (`suelto\`, `coleta\`), pero no hace falta.
+2. Copia **`referencia\Plantilla-Personaje-LoRA.md`** a esa carpeta y complétala: palabra clave, edad, rasgos fijos y rasgos que cambian. Al final trae la lista para revisar las imágenes.
+
+Lo más importante:
+
+- **Calidad antes que cantidad:** 20 a 35 imágenes donde el personaje se vea claramente igual (cara, ojos, pelo, piel). Una imagen con otro color de ojos o con otra cara confunde al LoRA.
+- **Variedad en todo lo demás:** poses, ángulos (de cerca, cuerpo entero, perfil, espalda), ropa y fondos. Si 10 imágenes tienen el mismo fondo, el LoRA lo dibujará siempre.
+- **Sin texto ni marcas de agua.** La estrella de Gemini, abajo a la derecha, también cuenta: recorta ese borde.
+- **¿Te falta un ángulo?** Hazlo con Qwen en el editor (**Cambio grande**) desde tu mejor imagen, por ejemplo *"Full body shot from head to toe, standing"* o *"Show her from the side in profile view"*. Revisa que siga viéndose adulta. **Nunca** uses imágenes hechas con Illustrious sin LoRA: no saben dibujar a tu personaje.
+
+### Paso 2 · Arma el paquete (dueño del personaje)
+
+1. Doble clic en **`ComfyForPanas\scripts\8-Preparar-Paquete-LoRA.bat`**.
+2. Arrastra la carpeta de imágenes y presiona Enter. Escribe la **palabra clave** y pega los **rasgos fijos** en inglés, separados por coma; los dos están en tu plantilla.
+3. La primera vez instala `onnxruntime` en el Python de tu ComfyUI y baja el etiquetador **WD14** (326 MB, desde Hugging Face, sin cuenta).
+4. Al terminar quedan dos cosas junto a tu carpeta:
+   - `Aiko_paquete\`: para revisar.
+   - **`Aiko_paquete.zip`**: el paquete para entrenar.
+
+Cada imagen recibe un `.txt` con la palabra clave y lo que se ve en ella (ropa, pose, fondo, peinado). Los rasgos fijos se quitan para que los aprenda la palabra clave; lo que cambia se deja, así después lo puedes pedir en el prompt.
+
+**Revisa `Aiko_paquete\etiquetas_frecuentes.txt`.** Si una etiqueta aparece en casi todas las imágenes y es un rasgo fijo (por ejemplo `dark skin` en 35/35), agrégala a los rasgos fijos y vuelve a ejecutar el `.bat`: la quita de todos los `.txt`. También puedes corregir un `.txt` a mano. Por ejemplo, si el personaje tiene dos flequillos, puedes escribir `blunt bangs` o `swept bangs` en cada imagen. Al volver a ejecutarlo se conservan tus cambios, se etiquetan solo las imágenes nuevas y se rehace el zip.
+
+### Paso 3 · Entrena (quien tenga NVIDIA)
+
+1. **Cierra ComfyUI**: el entrenamiento necesita toda la memoria de la tarjeta.
+2. Doble clic en **`ComfyForPanas\scripts\7-Entrenar-LoRA.bat`**, arrastra el `.zip` y presiona Enter.
+3. **La primera vez:**
+   - Instala **kohya sd-scripts**, el programa de entrenamiento, en `\EntrenarLoRA` del mismo disco que ComfyUI. Ocupa unos 7 GB y trae su propio Python 3.12 y torch 2.8.0, sin tocar tu ComfyUI.
+   - Si no tienes **Illustrious-XL v1.1**, te ofrece bajarlo (6.9 GB).
+4. Primero prepara las imágenes, lo que tarda unos minutos. Después entrena unos 1400 pasos y guarda una versión del LoRA por época (10 en total). El PC no se suspende mientras entrena; no cierres la ventana. Si se corta, ejecútalo de nuevo.
+5. Al terminar copia las versiones a **`ComfyUI\models\loras\<palabra clave>\`**. Si entrenaste para otra persona, mándale el archivo elegido (o todos).
+
+**¿Tu tarjeta aguantará?** En PowerShell, `.\Entrenar-LoRA.ps1 -Paquete "ruta\del\paquete.zip" -Prueba` entrena solo 20 pasos y muestra cuántos segundos tarda cada uno.
+
+### Paso 4 · Elige la mejor versión
+
+En el editor, en **🎨 Generar**, elige el LoRA en **⚙ Opciones → 🎨 Generar** y escribe la palabra clave al inicio de la descripción. Dentro de ComfyUI se usa con el nodo `LoraLoaderModelOnly`, entre el modelo y el KSampler. Compara las versiones (por ejemplo las épocas 4, 6, 8 y 10) con **la misma semilla y la misma descripción**, y también sin el LoRA:
+
+- **Si le falta:** no se parece al personaje.
+- **Si se pasó:** siempre sale con la misma pose, ropa o fondo, o la imagen se ve "quemada".
+
+Quédate con la primera versión que ya se parece y todavía obedece la descripción.
+
+**Qué está probado:**
+
+- **GTX 1070 de 8 GB:** con kohya `690ea7f` y torch 2.8.0 cu126, una prueba de 20 pasos usó 7.2 GB de VRAM y tardó unos 7 s por paso a 1024. Un entrenamiento completo (1400 pasos) se probó solo hasta el paso 110, sin errores.
+- **Todavía no se comprobó:** la calidad del LoRA, es decir, qué época conviene.
+- **RTX 30/40:** no se probaron. El script usa bf16 en esas tarjetas.
+
+**Detalles técnicos:**
+
+- **Base y red:** Illustrious-XL v1.1. LoRA de rango 8 (alpha 4), solo en la U-Net.
+- **Optimizador:** Adafactor con learning rate 3e-4, constante tras 50 pasos de calentamiento.
+- **Imágenes:** 1024 px con grupos por proporción, sin agrandar las más chicas.
+- **Memoria:** caché de latentes y del codificador de texto, y gradient checkpointing.
+- **Precisión:** fp16 con el VAE en fp32 (bf16 en RTX 30 o más nueva).
+- **Duración:** unos 140 pasos por época durante 10 épocas; las repeticiones de la carpeta `img\N_palabraclave` se calculan para eso.
+
+Todo está en el `.toml` del paquete, que se puede editar. Viene de `referencia\LoRA-Personaje.toml`, y es la configuración que la documentación de kohya recomienda para SDXL con 8 GB.
