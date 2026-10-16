@@ -1,8 +1,8 @@
 {
  "id": "6f1f4d0e-6c3a-4c7e-9a31-2b5e8d7c0a11",
  "revision": 0,
- "last_node_id": 14,
- "last_link_id": 17,
+ "last_node_id": 15,
+ "last_link_id": 18,
  "nodes": [
   {
    "id": 1,
@@ -64,7 +64,7 @@
      "name": "MODEL",
      "type": "MODEL",
      "links": [
-      2
+      18
      ]
     }
    ],
@@ -415,7 +415,7 @@
    ],
    "size": [
     540,
-    440
+    520
    ],
    "flags": {},
    "order": 11,
@@ -426,7 +426,7 @@
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "## Editar una imagen con Qwen-Image-2.1 (GGUF Q8_0)\n\n1. **Load Image**: sube tu imagen.\n2. **TextEncodeQwenImage21 → prompt**: escribe la instruccion en ingles, por ejemplo\n   `Change her outfit to a red kimono. Keep her face, hair, pose, framing and the background unchanged.`\n3. **Run**. El resultado sale en *Save Image* y en el comparador (arrastra la barra).\n\n**Proteger lo que no cambio** (siempre activo): compara la salida de Qwen con tu imagen y pega\nsolo la zona que realmente cambio; el resto queda identico al original y el resultado sale del\nmismo tamano que tu imagen. Abajo ves la salida directa de Qwen y la zona tomada (en blanco).\nSi pides cambiar el fondo, la zona editada es el fondo. *umbral* (20): mas alto = zona mas chica.\n\n**Ajustes (valores de la plantilla oficial):** 25 pasos, CFG 1, euler / simple.\n\n**resolution** (en el nodo de texto) es el presupuesto de pixeles de la imagen de referencia y del resultado:\n- 1024 ≈ 1 MP (valor oficial). 512 sirve para pruebas rapidas.\n- 0 = usa el tamano de tu imagen (redondeado a multiplos de 32).\n\n**Mas de una referencia:** conecta otra Load Image a la entrada `image_2` del nodo de texto\n(ej. una prenda o un fondo) y nombrala en la instruccion (\"the outfit from the second image\").\n\nLa primera ejecucion tarda mas: carga el codificador de texto de 17.5 GB.\n"
+    "## Editar una imagen con Qwen-Image-2.1 (GGUF Q8_0)\n\n1. **Load Image**: sube tu imagen.\n2. **TextEncodeQwenImage21 → prompt**: escribe la instruccion en ingles, por ejemplo\n   `Change her outfit to a red kimono. Keep her face, hair, pose, framing and the background unchanged.`\n3. **Run**. El resultado sale en *Save Image* y en el comparador (arrastra la barra).\n\n**Proteger lo que no cambio** (siempre activo): compara la salida de Qwen con tu imagen y pega\nsolo la zona que realmente cambio; el resto queda identico al original y el resultado sale del\nmismo tamano que tu imagen. Abajo ves la salida directa de Qwen y la zona tomada (en blanco).\nSi pides cambiar el fondo, la zona editada es el fondo. *umbral* (20): mas alto = zona mas chica.\n\n**Ajustes (valores de la plantilla oficial):** 25 pasos, CFG 1, euler / simple.\n\n**LoRA (opcional):** el nodo LoRA bajo el modelo viene desactivado. Elige un archivo de la carpeta\n`models\\loras`, selecciona el nodo y presiona Ctrl+B para activarlo. Solo sirven LoRAs hechos para\nQwen-Image 2.1. Si el LoRA pide CFG mayor que 1 (p. ej. 3-6), cada paso tarda casi el doble.\n\n**resolution** (en el nodo de texto) es el presupuesto de pixeles de la imagen de referencia y del resultado:\n- 1024 ≈ 1 MP (valor oficial). 512 sirve para pruebas rapidas.\n- 0 = usa el tamano de tu imagen (redondeado a multiplos de 32).\n\n**Mas de una referencia:** conecta otra Load Image a la entrada `image_2` del nodo de texto\n(ej. una prenda o un fondo) y nombrala en la instruccion (\"the outfit from the second image\").\nUna pose no se copia desde otra imagen (probado): describela con palabras.\n\nLa primera ejecucion tarda mas: carga el codificador de texto de 17.5 GB.\n"
    ],
    "title": "Como usar"
   },
@@ -535,6 +535,45 @@
    },
    "widgets_values": [],
    "title": "Zona editada (blanco = se tomo de Qwen)"
+  },
+  {
+   "id": 15,
+   "type": "LoraLoaderModelOnly",
+   "pos": [
+    40,
+    660
+   ],
+   "size": [
+    320,
+    82
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 4,
+   "title": "LoRA (opcional: selecciona y presiona Ctrl+B para activarlo)",
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 18
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      2
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoaderModelOnly"
+   },
+   "widgets_values": [
+    "elige_un_lora.safetensors",
+    1
+   ]
   }
  ],
  "links": [
@@ -548,7 +587,7 @@
   ],
   [
    2,
-   2,
+   15,
    0,
    3,
    0,
@@ -673,6 +712,14 @@
    14,
    0,
    "MASK"
+  ],
+  [
+   18,
+   2,
+   0,
+   15,
+   0,
+   "MODEL"
   ]
  ],
  "groups": [],

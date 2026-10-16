@@ -79,12 +79,24 @@
   .modo button:disabled{opacity:.35}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .chips button{font-size:12.5px;padding:3px 10px;border-radius:20px;color:var(--muted)}
-  #final{font-size:12px;color:var(--muted);margin-top:6px;min-height:1em}
+  #final{font-size:12px;color:var(--muted);margin-top:6px;min-height:1em;white-space:pre-line}
+  .row button.toggle{flex:none;font-size:13.5px;padding:0 11px}
+  .row button.toggle.on{background:var(--warn);border-color:var(--warn);color:#1d2027}
+  @media (max-width:700px){   /* ventana angosta: el texto va en su propia linea y los botones debajo */
+    .row{flex-wrap:wrap}
+    .row textarea{flex-basis:100%;order:-1}
+    #btnSend{margin-left:auto}
+  }
 
-  #opts{position:fixed;right:16px;top:58px;width:330px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #opts{position:fixed;right:16px;top:58px;width:330px;max-height:calc(100vh - 74px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #opts h3{margin:0 0 10px;font-size:15px}
+  #opts h4{margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
   #opts label{display:block;font-size:13px;margin:10px 0 4px;color:var(--muted)}
   #opts select,#opts input[type=number]{width:100%;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  #opts textarea{width:100%;min-height:52px;font-size:13px;padding:6px 8px;border-radius:8px}
+  #opts .lora{display:flex;gap:6px;margin-top:6px}
+  #opts .lora select{flex:1;min-width:0;width:auto}
+  #opts .lora input{width:74px;flex:none}
   #opts .chk{display:flex;gap:8px;align-items:flex-start;color:var(--text)}
   #opts .hint{font-size:12px;color:var(--muted);margin-top:3px}
 
@@ -118,6 +130,7 @@
     <div class="row">
       <button id="btnAttach" title="Subir otra imagen (empieza desde ella)" aria-label="Subir imagen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
       <textarea id="prompt" rows="1" placeholder="Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”"></textarea>
+      <button id="btnGrande" class="toggle" title="Para pose o escena nueva: no protege nada y usa la imagen completa de Qwen. Déjalo apagado para retoques (ropa, gestos, accesorios).">Cambio grande</button>
       <div class="modo" id="modo" title="Rápido = modelo Turbo, 8 pasos (unas 3 veces más rápido). Calidad = modelo normal, 25 pasos.">
         <button data-m="turbo">⚡ Rápido</button><button data-m="calidad">Calidad</button>
       </div>
@@ -146,8 +159,25 @@
   <label for="optThr">Umbral de protección</label>
   <input id="optThr" type="number" min="1" max="128" value="20">
   <div class="hint">Más alto = se toma de Qwen una zona más chica. 20 es el valor probado.</div>
-  <label class="chk"><input type="checkbox" id="optKeep" checked> Agregar “Keep everything else unchanged.” si no lo escribes</label>
-  <div style="margin-top:12px;text-align:right"><button id="btnOptsClose" class="small">Cerrar</button></div>
+  <label class="chk"><input type="checkbox" id="optKeep" checked> Agregar “Keep everything else unchanged.” si no lo escribes (con Cambio grande: “Keep the same character and art style.”)</label>
+
+  <h4>LoRAs (opcional)</h4>
+  <div class="hint">Archivos de la carpeta <code>models\loras</code> de ComfyUI. Solo sirven los hechos para <b>Qwen-Image 2.1</b>: los de otros modelos (SD 1.5, SDXL, Qwen-Image antiguo) no hacen nada. El número es la fuerza (1 = normal).</div>
+  <div class="lora"><select id="optLora1" aria-label="LoRA 1"></select><input id="optLora1s" type="number" step="0.05" min="-2" max="2" value="1" title="Fuerza del LoRA 1"></div>
+  <div class="lora"><select id="optLora2" aria-label="LoRA 2"></select><input id="optLora2s" type="number" step="0.05" min="-2" max="2" value="1" title="Fuerza del LoRA 2"></div>
+
+  <h4>Muestreo (solo modo Calidad)</h4>
+  <label for="optCfg">CFG</label>
+  <input id="optCfg" type="number" min="1" max="10" step="0.5" value="1">
+  <div class="hint">1 = lo probado. Algunos LoRAs piden 3–6: con CFG mayor que 1 cada paso se calcula dos veces (≈ el doble de tiempo) y se usa el prompt negativo.</div>
+  <label for="optNeg">Prompt negativo (solo con CFG mayor que 1)</label>
+  <textarea id="optNeg" rows="2" placeholder="p. ej. blurry, extra fingers"></textarea>
+  <label for="optSampler">Sampler</label>
+  <select id="optSampler"></select>
+  <label for="optScheduler">Scheduler</label>
+  <select id="optScheduler"></select>
+  <div class="hint">Lo probado: euler + simple. El modo Rápido usa siempre su receta fija (CFG 1, euler, 8 pasos).</div>
+  <div style="margin-top:12px;display:flex;justify-content:space-between"><button id="btnOptsReset" class="small" title="CFG 1, sin prompt negativo, euler + simple">Muestreo probado</button><button id="btnOptsClose" class="small">Cerrar</button></div>
 </div>
 
 <div id="viewer" class="hidden">
@@ -182,8 +212,10 @@ const versions = () => S.msgs.filter(m => m.ref && m.v !== undefined);
 const byV = v => versions().find(m => m.v === v);
 
 let models = null, busy = false, ws = null;
-let modo = null;   // 'turbo' (Rapido, 8 pasos) o 'calidad' (25 pasos); se elige al conocer los modelos
-try{ modo = (JSON.parse(localStorage.getItem(STORE + '.opts')) || {}).modo || null; }catch(e){}
+let savedOpts = {};   // opciones guardadas; las listas (LoRAs, sampler) se llenan recien al conocer los modelos
+try{ savedOpts = JSON.parse(localStorage.getItem(STORE + '.opts')) || {}; }catch(e){}
+let modo = savedOpts.modo || null;   // 'turbo' (Rapido, 8 pasos) o 'calidad' (25 pasos); se elige al conocer los modelos
+let grande = false;   // Cambio grande: sin proteccion (pose o escena nueva); no se guarda entre sesiones
 // sigmas del modo Turbo: los de la plantilla oficial de ComfyUI (image_qwen_image_2_1_turbo_image_edit)
 const TURBO_SIGMAS = '1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0';
 const view = (ref, bust) => `${API}/view?filename=${encodeURIComponent(ref.filename)}&subfolder=${encodeURIComponent(ref.subfolder||'')}&type=${ref.type}${bust?'&t='+Date.now():''}`;
@@ -222,7 +254,14 @@ async function checkServer(){
     try{ m.verificar = !!(await getJSON('/object_info/VerificarValores')).VerificarValores; }catch(e){ m.verificar = false; }
     // decodificar con reintento: si el VAE devuelve NaN (pasa en Radeon) lo vuelve a cargar en vez de perder la edicion
     try{ m.seguro = !!(await getJSON('/object_info/DecodificarSeguro')).DecodificarSeguro; }catch(e){ m.seguro = false; }
+    // LoRAs de la carpeta loras y las listas de sampler/scheduler (nodos base de ComfyUI)
+    for(const n of ['LoraLoaderModelOnly','KSampler']){ try{ Object.assign(info, await getJSON('/object_info/' + n)); }catch(e){} }
+    m.loras = info.LoraLoaderModelOnly ? opts(info.LoraLoaderModelOnly.input.required.lora_name) : [];
+    const ks = info.KSampler && info.KSampler.input.required;
+    m.samplers = ks ? opts(ks.sampler_name) : ['euler'];
+    m.schedulers = ks ? opts(ks.scheduler) : ['simple'];
     models = m;
+    fillOpts();
     if(!m.turbo && modo === 'turbo') modo = 'calidad';
     if(!m.unet && modo === 'calidad') modo = 'turbo';
     if(!modo) modo = m.turbo ? 'turbo' : 'calidad';
@@ -298,8 +337,14 @@ function renderMsg(m){
   if(m.kind === 'error') return el(`<div class="msg"><div class="bubble err">${esc(m.text)}</div></div>`);
   if(m.kind === 'result'){
     const cur = S.base === m.v;
+    const calidad = m.modo !== 'turbo';
+    const extra = [m.grande ? 'Cambio grande (sin proteger)' : '',
+      ...(m.loras || []).map(l => `LoRA ${shortName(l.name)} ${l.s}`),
+      calidad && m.cfg > 1 ? `CFG ${m.cfg}` : '',
+      calidad && m.sampler && (m.sampler !== 'euler' || m.scheduler !== 'simple') ? `${m.sampler} + ${m.scheduler}` : ''
+    ].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('');
     const info = m.rawOf !== undefined ? `<span>versión sin proteger de v${m.rawOf}</span>`
-      : `<span>${fmtT(m.secs)}</span><span>semilla ${m.seed}</span><span>${m.res === 0 ? 'tamaño original' : m.res + ' px'} · ${m.modo === 'turbo' ? '⚡ Rápido (8 pasos)' : 'Calidad (' + m.steps + ' pasos)'}</span><span class="zone"></span>`;
+      : `<span>${fmtT(m.secs)}</span><span>semilla ${m.seed}</span><span>${m.res === 0 ? 'tamaño original' : m.res + ' px'} · ${calidad ? 'Calidad (' + m.steps + ' pasos)' : '⚡ Rápido (8 pasos)'}</span>${extra}<span class="zone"></span>`;
     const e = el(`<div class="msg" data-v="${m.v}"><div class="bubble result">
       <img class="main" alt="resultado">
       <div class="meta"><span class="tag ${cur?'cur':''}">v${m.v}${cur?' · editando esta':''}</span>${info}</div>
@@ -343,7 +388,15 @@ function refreshComposer(){
   $('#btnSend').disabled = !models || !b || busy || !$('#prompt').value.trim();
   $('#btnAttach').disabled = busy;
   $('#btnSend').textContent = busy ? 'Generando…' : 'Enviar';
-  $('#final').textContent = $('#prompt').value.trim() ? 'Se enviará: ' + finalPrompt($('#prompt').value) : '';
+  $('#btnGrande').disabled = busy;
+  $('#btnGrande').classList.toggle('on', grande);
+  // lo que cambia el resultado o el tiempo queda a la vista bajo el cuadro de texto
+  const o = opt(), notas = [];
+  if(grande) notas.push('Cambio grande: sin protección');
+  if(o.loras.length) notas.push('LoRA: ' + o.loras.map(l => `${shortName(l.name)} (${l.s})`).join(', '));
+  if(modo === 'calidad' && o.cfg > 1) notas.push(`CFG ${o.cfg}: ≈ el doble de tiempo`);
+  const txt = $('#prompt').value.trim() ? 'Se enviará: ' + finalPrompt($('#prompt').value) : '';
+  $('#final').textContent = [txt, notas.join(' · ')].filter(Boolean).join('\n');
   for(const bt of document.querySelectorAll('#modo button')){
     const disponible = models && (bt.dataset.m === 'turbo' ? models.turbo : models.unet);
     bt.disabled = !disponible || busy;
@@ -371,11 +424,35 @@ async function uploadFile(file){
 }
 
 // ---------- generar ----------
-const opt = () => ({res: +$('#optRes').value, steps: Math.max(1, +$('#optSteps').value || 25), seed: $('#optSeed').value === '' ? null : +$('#optSeed').value, thr: Math.max(1, +$('#optThr').value || 20), keep: $('#optKeep').checked, modo});
+// lista desplegable: antes de llenarse por primera vez vale lo guardado
+const selVal = (id, key) => { const s = $(id); return s.dataset.filled ? s.value : (savedOpts[key] ?? ''); };
+const loraSel = i => { const name = selVal('#optLora' + i, 'lora' + i), s = +$('#optLora' + i + 's').value; return name && s ? {name, s} : null; };
+const opt = () => ({res: +$('#optRes').value, steps: Math.max(1, +$('#optSteps').value || 25), seed: $('#optSeed').value === '' ? null : +$('#optSeed').value, thr: Math.max(1, +$('#optThr').value || 20), keep: $('#optKeep').checked, modo,
+  grande, loras: [1, 2].map(loraSel).filter(Boolean), cfg: Math.max(1, +$('#optCfg').value || 1), neg: $('#optNeg').value.trim(),
+  sampler: selVal('#optSampler', 'sampler') || 'euler', scheduler: selVal('#optScheduler', 'scheduler') || 'simple'});
+const shortName = n => n.replace(/^.*[\\/]/, '').replace(/\.(safetensors|ckpt|pt)$/i, '');
+function fillSelect(sel, values, saved, def, none){
+  const list = (none !== undefined ? [''] : []).concat(values);
+  const cur = sel.dataset.filled ? sel.value : (saved ?? def);
+  const sig = list.join('\n');
+  if(sel.dataset.sig !== sig){
+    sel.innerHTML = list.map(v => `<option value="${esc(v)}">${v ? esc(v) : esc(none)}</option>`).join('');
+    sel.dataset.sig = sig;
+  }
+  sel.value = list.includes(cur) ? cur : (list.includes(def) ? def : list[0]);
+  sel.dataset.filled = '1';
+}
+function fillOpts(){
+  if(!models) return;
+  for(const i of [1, 2]) fillSelect($('#optLora' + i), models.loras, savedOpts['lora' + i], '', '(sin LoRA)');
+  fillSelect($('#optSampler'), models.samplers, savedOpts.sampler, 'euler');
+  fillSelect($('#optScheduler'), models.schedulers, savedOpts.scheduler, 'simple');
+}
 function finalPrompt(text){
   let t = text.trim().replace(/\s+/g, ' ');
   if(t && !/[.!?]$/.test(t)) t += '.';
-  if(opt().keep && t && !/\bkeep\b|\bunchanged\b/i.test(t)) t += ' Keep everything else unchanged.';
+  // en cambios grandes el fondo y la pose si cambian: solo se pide conservar al personaje
+  if(opt().keep && t && !/\bkeep\b|\bunchanged\b/i.test(t)) t += grande ? ' Keep the same character and art style.' : ' Keep everything else unchanged.';
   return t;
 }
 function buildGraph(image, prompt, o, seed){
@@ -386,10 +463,10 @@ function buildGraph(image, prompt, o, seed){
     '3': {class_type:'QwenImage21Cache', inputs:{model:['2',0], device:'auto', dtype:'default'}},
     '4': {class_type:'CLIPLoader', inputs:{clip_name: models.clip, type:'qwen_image', device:'default'}},
     '5': {class_type:'VAELoader', inputs:{vae_name: models.vae}},
-    '6': {class_type:'TextEncodeQwenImage21', inputs:{clip:['4',0], prompt, negative_prompt:'', resolution:o.res, 'images.image_1':['1',0], vae:['5',0]}},
+    '6': {class_type:'TextEncodeQwenImage21', inputs:{clip:['4',0], prompt, negative_prompt: !turbo && o.cfg > 1 ? o.neg : '', resolution:o.res, 'images.image_1':['1',0], vae:['5',0]}},
     '7': turbo
       ? {class_type:'SamplerCustomAdvanced', inputs:{noise:['20',0], guider:['21',0], sampler:['22',0], sigmas:['23',0], latent_image:['6',2]}}
-      : {class_type:'KSampler', inputs:{model:['3',0], positive:['6',0], negative:['6',1], latent_image:['6',2], seed, steps:o.steps, cfg:1, sampler_name:'euler', scheduler:'simple', denoise:1}},
+      : {class_type:'KSampler', inputs:{model:['3',0], positive:['6',0], negative:['6',1], latent_image:['6',2], seed, steps:o.steps, cfg:o.cfg, sampler_name:o.sampler, scheduler:o.scheduler, denoise:1}},
     '8': {class_type: models.seguro ? 'DecodificarSeguro' : 'VAEDecode', inputs:{samples:[models.verificar ? '16' : '7', 0], vae:['5',0]}},
     '12': {class_type:'ProtegerSinCambios', inputs:{original:['1',0], editada:['8',0], umbral:o.thr}},
     '9': {class_type:'SaveImage', inputs:{images:['12',0], filename_prefix:'EditorQwen/edit'}},
@@ -398,6 +475,14 @@ function buildGraph(image, prompt, o, seed){
     '14': {class_type:'SaveImage', inputs:{images:['15',0], filename_prefix:'EditorQwen/zona'}},
   };
   if(models.verificar) g['16'] = {class_type:'VerificarValores', inputs:{samples:['7',0], positive:['6',0]}};
+  // LoRAs encadenados entre el modelo y la cache ('30', '31')
+  let model = ['2',0];
+  o.loras.forEach((l, i) => { const id = String(30 + i); g[id] = {class_type:'LoraLoaderModelOnly', inputs:{model, lora_name:l.name, strength_model:l.s}}; model = [id,0]; });
+  g['3'].inputs.model = model;
+  if(o.grande){   // cambio grande: se guarda la salida de Qwen tal cual, sin proteccion
+    for(const k of ['12','13','14','15']) delete g[k];
+    g['9'].inputs.images = ['8',0];
+  }
   if(turbo){   // mismo muestreo que la plantilla oficial Turbo: CFG 1, euler, 8 pasos con sigmas fijos
     g['20'] = {class_type:'RandomNoise', inputs:{noise_seed: seed}};
     g['21'] = {class_type:'CFGGuider', inputs:{model:['3',0], positive:['6',0], negative:['6',1], cfg:1}};
@@ -443,7 +528,8 @@ function startJob(p){
   const tick = () => { phase.innerHTML = `${label} <small>· ${fmtT((Date.now()-p.t0)/1000)}</small>${stepTxt ? '<br><small>' + stepTxt + '</small>' : ''}`; };
   const timer = setInterval(tick, 1000);
   const labels = {'1':'Cargando la imagen…','2':'Cargando el modelo…','4':'Cargando el codificador de texto…','5':'Cargando el VAE…',
-    '6':'Leyendo la imagen y la instrucción…','7':'Dibujando…','8':'Decodificando…','12':'Protegiendo lo que no cambió…','9':'Guardando…','13':'Guardando…'};
+    '6':'Leyendo la imagen y la instrucción…','7':'Dibujando…','8':'Decodificando…','12':'Protegiendo lo que no cambió…','9':'Guardando…','13':'Guardando…',
+    '30':'Aplicando el LoRA…','31':'Aplicando el LoRA…'};
   job = {id: p.id, el: e,
     preview(blob){ if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = URL.createObjectURL(blob); pv.innerHTML = ''; const i = new Image(); i.src = lastUrl; pv.appendChild(i); },
     event(type, d){
@@ -489,7 +575,8 @@ function startJob(p){
   const finish = (res, err) => {
     clearInterval(timer); if(lastUrl) URL.revokeObjectURL(lastUrl);
     const secs = (Date.now() - p.t0) / 1000;
-    if(res){ const v = S.nextV++; S.msgs.push(Object.assign({kind:'result', v, from:p.from, text:p.text, seed:p.seed, res:p.o.res, steps:p.o.steps, modo:p.o.modo, secs}, res)); S.base = v; }
+    if(res){ const v = S.nextV++; S.msgs.push(Object.assign({kind:'result', v, from:p.from, text:p.text, seed:p.seed, res:p.o.res, steps:p.o.steps, modo:p.o.modo, secs,
+      grande:!!p.o.grande, loras:p.o.loras || [], cfg:p.o.cfg || 1, sampler:p.o.sampler, scheduler:p.o.scheduler}, res)); S.base = v; }
     else S.msgs.push({kind:'error', text: err});
     S.pending = null; job = null; busy = false; save(); render();
   };
@@ -542,12 +629,26 @@ document.addEventListener('drop', ev => { ev.preventDefault(); document.body.cla
 document.addEventListener('keydown', ev => { if(ev.key === 'Escape'){ $('#viewer').classList.add('hidden'); $('#opts').classList.add('hidden'); } });
 $('#btnOpts').onclick = () => $('#opts').classList.toggle('hidden');
 $('#btnOptsClose').onclick = () => $('#opts').classList.add('hidden');
-const guardarOpts = () => { try{ localStorage.setItem(STORE + '.opts', JSON.stringify(opt())); }catch(e){} };
+const guardarOpts = () => {
+  const o = Object.assign(opt(), {lora1: selVal('#optLora1', 'lora1'), lora1s: +$('#optLora1s').value, lora2: selVal('#optLora2', 'lora2'), lora2s: +$('#optLora2s').value});
+  delete o.grande; delete o.loras;
+  try{ localStorage.setItem(STORE + '.opts', JSON.stringify(o)); }catch(e){}
+};
 for(const bt of document.querySelectorAll('#modo button')) bt.onclick = () => { modo = bt.dataset.m; guardarOpts(); refreshComposer(); };
-for(const id of ['#optRes','#optSteps','#optSeed','#optThr','#optKeep']){
+$('#btnGrande').onclick = () => { grande = !grande; refreshComposer(); };
+for(const id of ['#optRes','#optSteps','#optSeed','#optThr','#optKeep','#optLora1','#optLora1s','#optLora2','#optLora2s','#optCfg','#optNeg','#optSampler','#optScheduler']){
   $(id).addEventListener('change', () => { guardarOpts(); refreshComposer(); });
 }
-try{ const o = JSON.parse(localStorage.getItem(STORE + '.opts')); if(o){ $('#optRes').value = o.res; $('#optSteps').value = o.steps; $('#optSeed').value = o.seed ?? ''; $('#optThr').value = o.thr; $('#optKeep').checked = o.keep; } }catch(e){}
+$('#btnOptsReset').onclick = () => {
+  $('#optCfg').value = 1; $('#optNeg').value = '';
+  if($('#optSampler').dataset.filled){ $('#optSampler').value = 'euler'; $('#optScheduler').value = 'simple'; }
+  else { savedOpts.sampler = 'euler'; savedOpts.scheduler = 'simple'; }
+  guardarOpts(); refreshComposer();
+};
+{ const o = savedOpts;
+  if(o.res !== undefined){ $('#optRes').value = o.res; $('#optSteps').value = o.steps; $('#optSeed').value = o.seed ?? ''; $('#optThr').value = o.thr; $('#optKeep').checked = o.keep; }
+  $('#optLora1s').value = o.lora1s ?? 1; $('#optLora2s').value = o.lora2s ?? 1;
+  $('#optCfg').value = o.cfg ?? 1; $('#optNeg').value = o.neg ?? ''; }
 $('#btnNew').onclick = () => {
   if(busy){ alert('Espera a que termine (o detén) la edición en curso.'); return; }
   if(S.msgs.length && !confirm('¿Empezar una conversación nueva? Las imágenes siguen guardadas en ComfyUI/output/EditorQwen.')) return;

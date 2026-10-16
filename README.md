@@ -35,7 +35,9 @@ Después sigue **solo la sección de tu marca**: [NVIDIA (sección 3)](#3-instal
 | Editor, protección y modelos (Qwen-Image-2.1 Q8_0) | **Probados a fondo** en una NVIDIA GTX 1070 de 8 GB con 32 GB de RAM: ropa, fondo, pose, expresión, accesorios, pelo y ediciones en varias vueltas. |
 | Scripts del paquete (instalar, descargar modelos, lanzador) | **Probados en una instalación limpia** del ComfyUI portable oficial para NVIDIA (versión 0.40.0, variante `cu126`): instalan todo, ComfyUI arranca, reconoce los nodos y los modelos, y el editor se abre. En esa instalación limpia **no se generaron imágenes**; la generación se probó en la instalación principal (mismos nodos y modelos, ComfyUI 0.41). De `3-Probar-Edicion` se probó la comprobación (conexión, nodos, modelos y subida de la imagen); la edición de prueba en sí no se ejecutó. |
 | Codificador de texto "int8" (para PCs con 16 GB de RAM y tarjetas AMD) | **Probado**: el resultado es prácticamente idéntico al normal (diferencia media de 0.26 sobre 255). |
-| **Modo Rápido (Turbo, 8 pasos)** | Usa el modelo y el muestreo de la **plantilla oficial** de ComfyUI para Qwen-Image-2.1 Turbo. ComfyUI aceptó el proceso sin errores, pero **todavía no comparé su calidad ni su velocidad** con el modo Calidad. Si un resultado no te convence, repítelo en Calidad. |
+| **Modo Rápido (Turbo, 8 pasos)** | Usa el modelo y el muestreo de la **plantilla oficial** de ComfyUI para Qwen-Image-2.1 Turbo. En una prueba (una sonrisa) salió **prácticamente igual** que el modo Calidad. Su velocidad todavía no la medí. Si un resultado no te convence, repítelo en Calidad. |
+| **Cambio grande** (pose o escena nueva) | **Probado en el editor** (GTX 1070, 1024): "en un bosque nevado con abrigo y un farol" y "sentada en una taberna con una jarra" cambiaron pose, escena y objetos, y mantuvieron cara, pelo y ropa. Tarda lo mismo que una edición normal. |
+| **LoRAs y ajustes de muestreo** (CFG, sampler) | **Probado que el editor los aplica:** CFG 3 con `er_sde` + `beta` funcionó y cada paso tardó el doble (9.3 s contra 4.7 s, a 512). **Con un LoRA hecho para Qwen 2.1 todavía no se probó.** Uno de SD 1.5 no hizo nada, como se espera. El nodo GGUF dice que los LoRAs funcionan "de forma experimental": prueba cada LoRA con la misma semilla, con y sin él. |
 | NVIDIA RTX (serie 16, 20, 30, 40, 50) | **No probado por mí** (no tengo esas tarjetas). Usa el ComfyUI portable oficial y los mismos scripts; debería funcionar y ser bastante más rápido. |
 | **AMD Radeon** | **Funciona** en una RX 6700 XT y en una RX 6600 XT (pruebas de usuarios con `comfyui-rocm`), pero **muy lento** en modo Calidad a 1024: 35 s por paso en la 6700 XT y 209 s por paso en la 6600 XT. Una edición además salió dañada. La causa es que **el modelo no cabe en la VRAM**: se copia desde la RAM en cada paso, y con 16 GB de RAM incluso desde el disco. Este paquete trae arreglos que **todavía no se probaron en una Radeon**: modo Rápido con un modelo Turbo más chico que cabe en la tarjeta, resolución 768, codificador int8, VAE en precisión completa (`--fp32-vae`) y una caché que libera RAM. Si ya lo tenías instalado, usa `4-Arreglo-AMD.bat` (sección 11). |
 
@@ -189,6 +191,8 @@ El README oficial de ComfyUI ya explica cómo usar las Radeon RX 6000 a 9000 en 
 - **Calidad** usa el modelo normal con 25 pasos. Úsalo para la versión final, o si un resultado en Rápido no te convenció.
 - El editor parte en Rápido si bajaste el modelo Turbo. Cada resultado indica con qué modo se hizo.
 
+**Cambio grande** (botón junto al cuadro de texto, se pone amarillo al activarlo): para **pose o escena nueva**, por ejemplo "sentada en una taberna con una jarra". Ahí cambia casi toda la imagen, así que la protección no sirve y podría dejar pedazos de la imagen anterior. Con el botón activo se usa la imagen completa de Qwen. Si escribes un pedido sin "keep", se le agrega *"Keep the same character and art style."* en vez de *"Keep everything else unchanged."*. **Apágalo para retoques** (ropa, gestos, accesorios): ahí la protección deja la cara y el fondo idénticos. Queda activo hasta que lo apagues o cierres el editor.
+
 En cada resultado tienes:
 
 | Botón | Para qué |
@@ -209,6 +213,12 @@ La conversación queda guardada aunque cierres el navegador. **＋ Nueva** empie
 | **Pasos** | Solo para el modo Calidad: 25 es lo recomendado. El modo Rápido usa siempre 8. |
 | **Semilla** | Vacía = al azar. Si pones un número, el mismo pedido da siempre el mismo resultado. |
 | **Umbral de protección** | 20 es lo probado. Más alto = se toma de Qwen una zona más chica. |
+| **LoRAs** | Hasta dos, con su fuerza (1 = normal). Ver [LoRAs (opcional)](#loras-opcional). |
+| **CFG** | Solo modo Calidad. 1 es lo probado. Algunos LoRAs piden 3–6: con CFG mayor que 1 **cada paso tarda casi el doble** y se usa el prompt negativo. |
+| **Prompt negativo** | Lo que no quieres que aparezca (en inglés). Solo se usa con CFG mayor que 1. |
+| **Sampler / Scheduler** | Solo modo Calidad. Lo probado es `euler` + `simple`; cámbialos solo si un LoRA lo pide. **Muestreo probado** vuelve a CFG 1, euler y simple. |
+
+Bajo el cuadro de texto ves lo que va a cambiar el resultado o el tiempo: Cambio grande, los LoRAs activos y el CFG.
 
 ### Cómo pedir las cosas (en inglés)
 
@@ -222,6 +232,7 @@ La conversación queda guardada aunque cierres el navegador. **＋ Nueva** empie
 | Una expresión | `Make her smile happily` · `Make her look surprised` |
 | Un accesorio | `Put a red baseball cap on her head` · `Put black sunglasses on her` |
 | El pelo | `Change her hair color to red` · `Make her hair long` |
+| Una escena nueva (con **Cambio grande**) | `Show the same woman sitting at a wooden table in a fantasy tavern at night, holding a large beer mug with both hands, laughing. Full body. Keep her face, hair and outfit exactly the same.` |
 
 **Consejos:**
 
@@ -229,12 +240,28 @@ La conversación queda guardada aunque cierres el navegador. **＋ Nueva** empie
 - **Di dónde va un accesorio:** "a thin silver necklace **over her shirt collar**". Si no, puede que cambie la ropa para mostrarlo.
 - **Para ropa nueva usa "Change her outfit to…"**, que reemplaza. Con "add…" la pone encima.
 - **Si un resultado no te gusta, prueba ↻ Otra variante** antes de reescribir el pedido.
+- **Las poses se piden con palabras.** Copiar la pose de otra imagen no funcionó: en la prueba, Qwen puso el personaje en el fondo de la otra imagen, pero con su pose original.
 
-### Proteger lo que no cambió (siempre activo)
+### Proteger lo que no cambió (activo salvo con Cambio grande)
 
 Qwen redibuja toda la imagen, así que la cara o el fondo pueden moverse un poquito aunque no lo pidas. El editor compara el resultado con tu imagen, detecta **solo la zona que de verdad cambió** y pega esa zona sobre tu original, con el borde suavizado. Todo lo demás queda **idéntico**, y el resultado sale del mismo tamaño que tu imagen. En gestos y accesorios toma también los alrededores del cambio, para que la cara quede coherente. En cada resultado ves qué porcentaje de la imagen se tomó de Qwen ("zona editada").
 
 En nuestras pruebas (ropa, fondo, pose, expresión y accesorios), fuera de la zona editada la imagen quedó prácticamente igual al original: una diferencia media de 0.1 sobre 255 o menos. Sin la protección, la cara y el fondo se movían entre 5 y 7.
+
+### LoRAs (opcional)
+
+Un **LoRA** es un archivo chico (de 50 a 300 MB) que le enseña algo extra al modelo, como un estilo o un tipo de imagen, sin reemplazarlo.
+
+1. Copia el archivo `.safetensors` a la carpeta **`models\loras`** de tu ComfyUI (ej. `C:\IA\ComfyUI_windows_portable\ComfyUI\models\loras`). Puedes usar subcarpetas.
+2. En el editor, **⚙ Opciones → LoRAs**: elígelo y ajusta la fuerza. La lista se actualiza sola en unos segundos.
+3. Si el autor del LoRA recomienda CFG, sampler o scheduler, ponlos en **Muestreo** y usa el modo **Calidad**. El modo Rápido usa siempre su receta fija.
+
+Ten en cuenta:
+
+- **Solo sirven LoRAs hechos para Qwen-Image 2.1.** Los de SD 1.5, SDXL/Illustrious, Qwen-Image antiguo o Qwen-Image-Edit 2509/2511 no dan error: simplemente no hacen nada.
+- **Compruébalo:** fija una semilla en Opciones y haz el mismo pedido con y sin el LoRA. Si salen iguales, el LoRA no está actuando.
+- Con el modo Rápido (Turbo) un LoRA puede funcionar distinto o no funcionar, porque se entrenan sobre el modelo normal.
+- Cada resultado indica qué LoRAs y qué CFG se usaron.
 
 ---
 
@@ -342,6 +369,8 @@ ComfyForPanas\
   Por eso `4-Arreglo-AMD` usa un Turbo Q4_K_M (4.2 GB) en tarjetas de hasta 12 GB, y el editor parte en 768 en Radeon.
 - **NaN en AMD desde la segunda edición:** con la memoria dinámica de ComfyUI (DynamicVRAM, el log dice `prepared for dynamic VRAM loading`), en Radeon un modelo que queda en la VRAM entre usos puede leer pesos dañados, sobre todo si el VAE necesita más memoria de la libre ([Comfy-Org/ComfyUI#15452](https://github.com/Comfy-Org/ComfyUI/issues/15452)). Por eso el editor decodifica con el nodo `DecodificarSeguro`: en AMD descarga todos los modelos antes y después de decodificar (cada edición parte como la primera) y, en cualquier tarjeta, si el VAE devuelve NaN lo vuelve a cargar y decodifica otra vez (y si sigue, por partes de 512 px), sin repetir el dibujo. `--disable-dynamic-vram` también lo evita, pero usa más RAM y no lo probé.
 - **Modo Rápido:** usa `qwen-image-2.1-turbo` con el muestreo de la plantilla oficial de ComfyUI: CFG 1, euler, 8 pasos con sigmas fijos (`1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0`).
+- **LoRAs:** el editor encadena hasta dos `LoraLoaderModelOnly` entre el modelo GGUF y `QwenImage21Cache`. En el workflow de ComfyUI ese nodo viene desactivado (bypass): elige el archivo y actívalo con Ctrl+B.
+- **Cambio grande:** no agrega el nodo de protección; guarda la salida del VAE tal cual, al tamaño de trabajo (no se escala al tamaño de tu imagen).
 - **Sin acceso remoto:** el editor se sirve desde el mismo ComfyUI, así que no hace falta abrir ComfyUI a otras páginas (CORS).
 
 ---
