@@ -197,7 +197,8 @@ $base = $trabajo
 if (-not (Test-Path "$base\img")) { $sub1 = Get-ChildItem $trabajo -Directory | Where-Object { Test-Path "$($_.FullName)\img" } | Select-Object -First 1; if ($sub1) { $base = $sub1.FullName } }
 $dirs = @(Get-ChildItem "$base\img" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+_\S+' })
 if ($dirs.Count -eq 0) { Falla 'El paquete no trae la carpeta img\<repeticiones>_<palabra clave> (ej. img\4_aikochan).' }
-$toml = Get-ChildItem $base -Filter *.toml | Select-Object -First 1
+# el .toml del paquete; config_final.toml es el que escribe este script (puede quedar de una vuelta anterior, incluso de -Prueba)
+$toml = Get-ChildItem $base -Filter *.toml | Where-Object { $_.Name -ne 'config_final.toml' } | Select-Object -First 1
 if (-not $toml) { Falla 'El paquete no trae el archivo .toml de configuracion.' }
 $imgs = @(); foreach ($d in $dirs) { $imgs += @(Get-ChildItem $d.FullName -File | Where-Object { $_.Extension -match '^\.(png|jpe?g|webp)$' }) }
 $sinTxt = @($imgs | Where-Object { -not (Test-Path ([System.IO.Path]::ChangeExtension($_.FullName, '.txt'))) })
