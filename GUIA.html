@@ -130,6 +130,10 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 <td><strong>Probado en el editor</strong> (GTX 1070, 1024): "en un bosque nevado con abrigo y un farol" y "sentada en una taberna con una jarra" cambiaron pose, escena y objetos, y mantuvieron cara, pelo y ropa. Tarda lo mismo que una edición normal.</td>
 </tr>
 <tr>
+<td><strong>Referencia</strong> (copiar la ropa de otra imagen)</td>
+<td><strong>Probado</strong> (GTX 1070, modo Rápido, 768): con la instrucción automática, que nombra las prendas, <strong>copió el uniforme completo sin texto extra</strong> (chaqueta, top, cinturón y pantalón) y mantuvo cara, pelo, pose y fondo. Le quedó una franja roja del short original en el pantalón, que en la referencia es blanco liso. Tarda 11.3 s por paso: unos 2 min 30 s con los modelos ya cargados y casi 3 min la primera vez. <strong>La pose no se copia</strong>, por eso el editor ya no lo ofrece. Probé 4 formas (modo Rápido y Calidad, las imágenes en los dos órdenes, y la pose descrita con palabras): o dejaba al personaje en su pose, o lo cambiaba por la persona de la referencia.</td>
+</tr>
+<tr>
 <td><strong>LoRAs y ajustes de muestreo</strong> (CFG, sampler)</td>
 <td><strong>Probado que el editor los aplica:</strong> CFG 3 con <code>er_sde</code> + <code>beta</code> funcionó y cada paso tardó el doble (9.3 s contra 4.7 s, a 512). <strong>Con un LoRA hecho para Qwen 2.1 todavía no se probó.</strong> Uno de SD 1.5 no hizo nada, como se espera. El nodo GGUF dice que los LoRAs funcionan "de forma experimental": prueba cada LoRA con la misma semilla, con y sin él.</td>
 </tr>
@@ -316,6 +320,26 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 </tbody>
 </table>
 <p>La conversación queda guardada aunque cierres el navegador. <strong>＋ Nueva</strong> empieza con otra imagen.</p>
+<h3 id="copiar-la-ropa-de-otra-imagen--referencia">Copiar la ropa de otra imagen (＋ Referencia)</h3>
+<p>Sirve para vestir a tu personaje con la ropa de otra imagen sin describirla con palabras.</p>
+<ol>
+<li>Sube primero la imagen de <strong>tu personaje</strong>, como siempre.</li>
+<li>Clic en <strong>＋ Referencia</strong> (junto al cuadro de texto) y elige la imagen con la ropa que quieres. También puedes soltarla sobre ese botón.</li>
+<li>Sobre el cuadro de texto aparecen las dos, numeradas:
+   - <strong>① Personaje (base)</strong>: la imagen que se edita. De ella salen la cara, el pelo, la pose, el estilo, el fondo y el tamaño del resultado.
+   - <strong>② Referencia</strong>: de ella se copia solo la ropa.</li>
+<li>Presiona <strong>Enviar</strong>. No hace falta escribir nada: el editor arma la instrucción en inglés (la ves bajo el cuadro de texto). Si escribes algo, se agrega al medio, por ejemplo <em>"She is holding a sword"</em>.</li>
+</ol>
+<p>Ten en cuenta:</p>
+<ul>
+<li><strong>La protección sigue activa</strong>, como en un retoque: la cara y el fondo quedan idénticos y se toma de Qwen solo la zona de la ropa.</li>
+<li><strong>La pose no se copia</strong> desde la referencia (ver la tabla de la sección 2). Para cambiar la pose, pídela con palabras y <strong>Cambio grande</strong> en una edición normal, sin referencia.</li>
+<li><strong>La referencia se queda puesta</strong> para los pedidos siguientes, hasta que presiones <strong>✕ Quitar</strong>. <strong>⇄ Referencia</strong> la cambia por otra.</li>
+<li><strong>↻ Otra variante</strong> repite el pedido con la misma referencia que usó ese resultado.</li>
+<li><strong>La instrucción automática nombra las prendas</strong> (top, chaqueta, pantalón o falda, cinturón y zapatos), porque con solo "the same outfit" Qwen copió la chaqueta y dejó el short. <strong>Si aun así falta una prenda o se cuela un detalle de la ropa vieja, nómbralo en el texto</strong>, por ejemplo <em>"Also replace her black shorts with the plain white pants and black belt"</em>.</li>
+<li><strong>Tarda más</strong> que una edición normal, porque Qwen lee dos imágenes: en una GTX 1070, 11.3 s por paso en modo Rápido a 768.</li>
+<li><strong>Instrucción propia:</strong> si escribes un pedido que nombra las imágenes como <code>&lt;image1&gt;</code> (tu personaje) y <code>&lt;image2&gt;</code> (la referencia), se envía tal cual, sin agregarle nada. Ejemplo (sin probar): <code>Dress the character from &lt;image1&gt; in the jacket from &lt;image2&gt;, keeping her own pants.</code></li>
+</ul>
 <p><strong>Opciones (⚙):</strong></p>
 <table>
 <thead>
@@ -406,7 +430,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 <li><strong>Di dónde va un accesorio:</strong> "a thin silver necklace <strong>over her shirt collar</strong>". Si no, puede que cambie la ropa para mostrarlo.</li>
 <li><strong>Para ropa nueva usa "Change her outfit to…"</strong>, que reemplaza. Con "add…" la pone encima.</li>
 <li><strong>Si un resultado no te gusta, prueba ↻ Otra variante</strong> antes de reescribir el pedido.</li>
-<li><strong>Las poses se piden con palabras.</strong> Copiar la pose de otra imagen no funcionó: en la prueba, Qwen puso el personaje en el fondo de la otra imagen, pero con su pose original.</li>
+<li><strong>Para copiar una ropa que ya tienes en otra imagen</strong>, usa <a href="#copiar-la-ropa-de-otra-imagen--referencia">＋ Referencia</a> en vez de describirla. Las poses, en cambio, se piden con palabras.</li>
 </ul>
 <h3 id="proteger-lo-que-no-cambió-activo-salvo-con-cambio-grande">Proteger lo que no cambió (activo salvo con Cambio grande)</h3>
 <p>Qwen redibuja toda la imagen, así que la cara o el fondo pueden moverse un poquito aunque no lo pidas. El editor compara el resultado con tu imagen, detecta <strong>solo la zona que de verdad cambió</strong> y pega esa zona sobre tu original, con el borde suavizado. Todo lo demás queda <strong>idéntico</strong>, y el resultado sale del mismo tamaño que tu imagen. En gestos y accesorios toma también los alrededores del cambio, para que la cara quede coherente. En cada resultado ves qué porcentaje de la imagen se tomó de Qwen ("zona editada").</p>
@@ -463,6 +487,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 <hr />
 <h2 id="7-extra-usarlo-dentro-de-comfyui">7. Extra: usarlo dentro de ComfyUI</h2>
 <p>Si te interesa ver el "motor": con ComfyUI abierto, entra a <a href="http://127.0.0.1:8188" target="_blank" rel="noopener">http://127.0.0.1:8188</a>, menú <strong>Workflows → Qwen21-Editar-GGUF</strong>. Ahí está el mismo proceso en nodos, con una nota de uso. Eliges la imagen, escribes la instrucción y presionas <strong>Ejecutar</strong>.</p>
+<p><strong>Workflows → Qwen21-Ropa-Referencia</strong> es lo mismo que <strong>＋ Referencia</strong>: dos nodos de imagen, <strong>1 · Personaje (base)</strong> y <strong>2 · Referencia (ropa)</strong>, una instrucción que los nombra <code>&lt;image1&gt;</code> y <code>&lt;image2&gt;</code>, y la misma protección del workflow de una imagen.</p>
 <hr />
 <h2 id="8-problemas-y-soluciones">8. Problemas y soluciones</h2>
 <table>
@@ -573,7 +598,9 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 ├─ nodos\
 │   ├─ ComfyUI-EditorQwen\        el editor web (se abre en http://127.0.0.1:8188/editor-qwen)
 │   └─ ComfyUI-ProtegerEdicion\   el nodo &quot;Proteger lo que no cambió&quot;
-├─ workflows\Qwen21-Editar-GGUF.json   el mismo proceso para usar dentro de ComfyUI
+├─ workflows\                     el mismo proceso para usar dentro de ComfyUI:
+│   ├─ Qwen21-Editar-GGUF.json            editar una imagen
+│   └─ Qwen21-Ropa-Referencia.json        copiar la ropa de otra imagen
 ├─ referencia\                    aquí quedan el resultado de la prueba y el informe del diagnóstico
 └─ herramientas\generar_guia.py   rehace GUIA.html a partir de README.md (solo para quien mantiene el repositorio)
 </code></pre>
@@ -632,6 +659,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 - <strong>Modo Rápido:</strong> usa <code>qwen-image-2.1-turbo</code> con el muestreo de la plantilla oficial de ComfyUI: CFG 1, euler, 8 pasos con sigmas fijos (<code>1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0</code>).
 - <strong>LoRAs:</strong> el editor encadena hasta dos <code>LoraLoaderModelOnly</code> entre el modelo GGUF y <code>QwenImage21Cache</code>. En el workflow de ComfyUI ese nodo viene desactivado (bypass): elige el archivo y actívalo con Ctrl+B.
 - <strong>Cambio grande:</strong> no agrega el nodo de protección; guarda la salida del VAE tal cual, al tamaño de trabajo (no se escala al tamaño de tu imagen).
+- <strong>Referencia:</strong> el nodo de texto de Qwen-Image-2.1 recibe tu personaje en <code>image_1</code> y la referencia en <code>image_2</code>, las dos a la resolución de Opciones. Qwen edita la primera (el resultado toma su tamaño) y le antepone a cada una la etiqueta <code>&lt;image1&gt;</code>, <code>&lt;image2&gt;</code>, que es como la plantilla oficial pide nombrarlas en la instrucción (no "the first image"). La protección se aplica igual que en una edición normal, comparando contra tu personaje.
 - <strong>Sin acceso remoto:</strong> el editor se sirve desde el mismo ComfyUI, así que no hace falta abrir ComfyUI a otras páginas (CORS).</p>
 <hr />
 <h2 id="10-licencia-y-créditos">10. Licencia y créditos</h2>

@@ -82,6 +82,19 @@
   #final{font-size:12px;color:var(--muted);margin-top:6px;min-height:1em;white-space:pre-line}
   .row button.toggle{flex:none;font-size:13.5px;padding:0 11px}
   .row button.toggle.on{background:var(--warn);border-color:var(--warn);color:#1d2027}
+  /* personaje + referencia: las dos imagenes que recibe Qwen, numeradas como las nombra la instruccion */
+  #refs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+  #refs .slot{flex:1 1 260px;display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 5px 5px;font-size:13px;min-width:0}
+  #refs .slot img{width:52px;height:52px;object-fit:cover;border-radius:6px;flex:none;background:var(--bg)}
+  #refs .slot b{display:block}
+  #refs .slot small{color:var(--muted)}
+  #refs .slot button{margin-left:auto;flex:none}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:650;flex:none}
+  .pair{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .pair figure{margin:0}
+  .pair img{height:96px;max-width:160px;object-fit:cover;border-radius:8px;display:block}
+  .pair figcaption{font-size:11.5px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
+  .pair .num{width:16px;height:16px;font-size:10.5px}
   @media (max-width:700px){   /* ventana angosta: el texto va en su propia linea y los botones debajo */
     .row{flex-wrap:wrap}
     .row textarea{flex-basis:100%;order:-1}
@@ -119,7 +132,7 @@
 </header>
 
 <div id="chat">
-  <div id="empty"><b>Sube una imagen para empezar</b>Haz clic aquí, arrástrala a la ventana o pégala con Ctrl+V.<br>Luego escribe qué quieres cambiar (en inglés) y sigue editando el resultado las veces que quieras.</div>
+  <div id="empty"><b>Sube una imagen para empezar</b>Haz clic aquí, arrástrala a la ventana o pégala con Ctrl+V.<br>Luego escribe qué quieres cambiar (en inglés) y sigue editando el resultado las veces que quieras.<br>Para copiarle a tu personaje la ropa de otra imagen, agrégala con <b style="display:inline;font-size:inherit">＋ Referencia</b>.</div>
   <div class="wrap" id="msgs"></div>
 </div>
 
@@ -127,9 +140,19 @@
   <div class="composer">
     <div id="strip" class="strip hidden" title="Historial de versiones: haz clic en una para seguir editando desde ella"></div>
     <div id="base" class="hidden"><img alt=""><span></span></div>
+    <div id="refs" class="hidden">
+      <div class="slot" title="La imagen que se edita: de aquí salen la cara, el pelo, el estilo y el fondo. Qwen la recibe como <image1>.">
+        <span class="num">1</span><img id="refsBase" alt=""><div><b>Personaje (base)</b><small id="refsBaseInfo"></small></div>
+      </div>
+      <div class="slot" id="refSlot" title="De esta imagen solo se copia la ropa. Qwen la recibe como <image2>. Puedes soltar aquí otra imagen para cambiarla.">
+        <span class="num">2</span><img id="refsRef" alt=""><div><b>Referencia</b><small>se copia la ropa</small></div>
+        <button id="btnRefQuitar" class="small" title="Quitar la referencia y volver a editar con una sola imagen">✕ Quitar</button>
+      </div>
+    </div>
     <div class="row">
       <button id="btnAttach" title="Subir otra imagen (empieza desde ella)" aria-label="Subir imagen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
       <textarea id="prompt" rows="1" placeholder="Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”"></textarea>
+      <button id="btnRef" class="toggle" title="Agregar una segunda imagen para copiarle a tu personaje la ropa">＋ Referencia</button>
       <button id="btnGrande" class="toggle" title="Para pose o escena nueva: no protege nada y usa la imagen completa de Qwen. Déjalo apagado para retoques (ropa, gestos, accesorios).">Cambio grande</button>
       <div class="modo" id="modo" title="Rápido = modelo Turbo, 8 pasos (unas 3 veces más rápido). Calidad = modelo normal, 25 pasos.">
         <button data-m="turbo">⚡ Rápido</button><button data-m="calidad">Calidad</button>
@@ -140,6 +163,7 @@
     <div class="chips" id="chips"></div>
   </div>
   <input type="file" id="file" accept="image/*" hidden>
+  <input type="file" id="fileRef" accept="image/*" hidden>
 </footer>
 
 <div id="opts" class="hidden">
@@ -205,7 +229,8 @@ const EXAMPLES = [
 const $ = s => document.querySelector(s);
 
 // ---------- estado (se guarda en localStorage) ----------
-let S = {cid: crypto.randomUUID(), msgs: [], base: null, nextV: 0, pending: null};
+// refImg: imagen de referencia (de ella se copia la ropa) que acompaña a la base mientras no se quite; no es una versión
+let S = {cid: crypto.randomUUID(), msgs: [], base: null, nextV: 0, pending: null, refImg: null};
 try{ const s = JSON.parse(localStorage.getItem(STORE)); if(s && s.cid) S = Object.assign(S, s); }catch(e){}
 const save = () => { try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} };
 const versions = () => S.msgs.filter(m => m.ref && m.v !== undefined);
@@ -216,6 +241,12 @@ let savedOpts = {};   // opciones guardadas; las listas (LoRAs, sampler) se llen
 try{ savedOpts = JSON.parse(localStorage.getItem(STORE + '.opts')) || {}; }catch(e){}
 let modo = savedOpts.modo || null;   // 'turbo' (Rapido, 8 pasos) o 'calidad' (25 pasos); se elige al conocer los modelos
 let grande = false;   // Cambio grande: sin proteccion (pose o escena nueva); no se guarda entre sesiones
+// Qwen-Image-2.1 nombra las imagenes <image1>, <image2>... y edita la primera (de ella sale el tamano del resultado),
+// asi que la base va primero y la referencia segunda. La plantilla oficial pide nombrarlas con esas etiquetas.
+// De la referencia solo se copia la ropa: la pose no se copio en ninguna prueba (o la ignoraba o cambiaba al personaje).
+// La ropa se pide prenda por prenda: con solo "the same outfit" Qwen copio la chaqueta y dejo el short original.
+const ROPA = "Dress the character from <image1> in the complete outfit of the person in <image2>, replacing all of the character's clothing (top, jacket, pants or skirt, belt and shoes) with the matching pieces from <image2>, keeping the pose from <image1>.";
+const KEEP_REF = 'Keep the face, hair, eye color, body proportions and art style of the character from <image1>, and keep the background of <image1>.';
 // sigmas del modo Turbo: los de la plantilla oficial de ComfyUI (image_qwen_image_2_1_turbo_image_edit)
 const TURBO_SIGMAS = '1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0';
 const view = (ref, bust) => `${API}/view?filename=${encodeURIComponent(ref.filename)}&subfolder=${encodeURIComponent(ref.subfolder||'')}&type=${ref.type}${bust?'&t='+Date.now():''}`;
@@ -332,13 +363,21 @@ function renderMsg(m){
   }
   if(m.kind === 'prompt'){
     const sent = m.sent !== m.text ? `<div class="sent">Enviado: ${esc(m.sent)}</div>` : '';
-    return el(`<div class="msg user"><div class="bubble">${esc(m.text)}<div class="sent">sobre v${m.from}</div>${sent}</div></div>`);
+    const pair = m.refImg ? `<div class="pair">
+        <figure><img data-i="base" alt=""><figcaption><span class="num">1</span>Personaje · v${m.from}</figcaption></figure>
+        <figure><img data-i="ref" alt=""><figcaption><span class="num">2</span>Referencia · ropa</figcaption></figure></div>` : '';
+    const e = el(`<div class="msg user"><div class="bubble">${pair}${esc(m.text)}<div class="sent">sobre v${m.from}</div>${sent}</div></div>`);
+    if(m.refImg){
+      const b = byV(m.from); if(b) stickImg(e.querySelector('[data-i=base]'), view(b.ref));
+      stickImg(e.querySelector('[data-i=ref]'), view(m.refImg.ref));
+    }
+    return e;
   }
   if(m.kind === 'error') return el(`<div class="msg"><div class="bubble err">${esc(m.text)}</div></div>`);
   if(m.kind === 'result'){
     const cur = S.base === m.v;
     const calidad = m.modo !== 'turbo';
-    const extra = [m.grande ? 'Cambio grande (sin proteger)' : '',
+    const extra = [m.refImg ? 'ropa de la referencia' : '', m.grande ? 'Cambio grande (sin proteger)' : '',
       ...(m.loras || []).map(l => `LoRA ${shortName(l.name)} ${l.s}`),
       calidad && m.cfg > 1 ? `CFG ${m.cfg}` : '',
       calidad && m.sampler && (m.sampler !== 'euler' || m.scheduler !== 'simple') ? `${m.sampler} + ${m.scheduler}` : ''
@@ -360,7 +399,7 @@ function renderMsg(m){
     e.querySelector('[data-a=cont]').onclick = () => setBase(m.v);
     e.querySelector('[data-a=cmp]').onclick = () => openViewer(m);
     const raw = e.querySelector('[data-a=raw]'); if(raw) raw.onclick = () => useRaw(m);
-    e.querySelector('[data-a=redo]').onclick = () => { if(busy) return; S.base = m.from; send(m.text, true); };
+    e.querySelector('[data-a=redo]').onclick = () => { if(busy) return; S.base = m.from; send(m.text, m); };
     zoneInfo(m, e.querySelector('.zone'));
     return e;
   }
@@ -382,20 +421,31 @@ async function zoneInfo(m, span){
   }catch(e){}
 }
 function refreshComposer(){
-  const b = S.base !== null ? byV(S.base) : null;
-  $('#base').classList.toggle('hidden', !b || versions().length > 1);
+  const b = S.base !== null ? byV(S.base) : null, r = S.refImg;
+  $('#base').classList.toggle('hidden', !b || versions().length > 1 || !!S.refImg);
   if(b){ $('#base img').src = view(b.ref); $('#base span').textContent = `Editando v${b.v}` + (b.kind === 'upload' ? ' (imagen original)' : ''); }
-  $('#btnSend').disabled = !models || !b || busy || !$('#prompt').value.trim();
+  $('#refs').classList.toggle('hidden', !S.refImg);
+  if(S.refImg){
+    $('#refsBase').src = b ? view(b.ref) : '';
+    $('#refsBaseInfo').textContent = b ? `v${b.v}` + (b.kind === 'upload' ? ' · imagen subida' : '') + ' · cara, pelo, estilo y fondo' : 'primero sube la imagen de tu personaje';
+    $('#refsRef').src = view(S.refImg.ref);
+  }
+  for(const id of ['#btnRefQuitar', '#btnRef']) $(id).disabled = busy;
+  $('#btnRef').textContent = S.refImg ? '⇄ Referencia' : '＋ Referencia';
+  $('#btnRef').title = S.refImg ? 'Cambiar la imagen de referencia' : 'Agregar una segunda imagen para copiarle a tu personaje la ropa';
+  $('#prompt').placeholder = r ? 'Opcional: algo más en inglés, p. ej. “She is holding a sword”' : 'Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”';
+  $('#btnSend').disabled = !models || !b || busy || (!$('#prompt').value.trim() && !r);
   $('#btnAttach').disabled = busy;
   $('#btnSend').textContent = busy ? 'Generando…' : 'Enviar';
   $('#btnGrande').disabled = busy;
   $('#btnGrande').classList.toggle('on', grande);
   // lo que cambia el resultado o el tiempo queda a la vista bajo el cuadro de texto
   const o = opt(), notas = [];
+  if(r) notas.push('Referencia: copia la ropa · más lento (Qwen lee dos imágenes)');
   if(grande) notas.push('Cambio grande: sin protección');
   if(o.loras.length) notas.push('LoRA: ' + o.loras.map(l => `${shortName(l.name)} (${l.s})`).join(', '));
   if(modo === 'calidad' && o.cfg > 1) notas.push(`CFG ${o.cfg}: ≈ el doble de tiempo`);
-  const txt = $('#prompt').value.trim() ? 'Se enviará: ' + finalPrompt($('#prompt').value) : '';
+  const txt = $('#prompt').value.trim() || r ? 'Se enviará: ' + finalPrompt($('#prompt').value, r) : '';
   $('#final').textContent = [txt, notas.join(' · ')].filter(Boolean).join('\n');
   for(const bt of document.querySelectorAll('#modo button')){
     const disponible = models && (bt.dataset.m === 'turbo' ? models.turbo : models.unet);
@@ -406,21 +456,31 @@ function refreshComposer(){
 }
 
 // ---------- subir imagen ----------
+async function subir(file){
+  const fd = new FormData();
+  fd.append('image', file, file.name || 'pegada.png'); fd.append('subfolder', 'EditorQwen'); fd.append('type', 'input');
+  const r = await getJSON('/upload/image', {method:'POST', body:fd});
+  const ref = {filename: r.name, subfolder: r.subfolder || '', type: r.type || 'input'};
+  const img = new Image(); img.src = view(ref); await img.decode();
+  return {ref, w: img.naturalWidth, h: img.naturalHeight};
+}
 async function uploadFile(file){
   if(busy) return;
   if(!file || !file.type.startsWith('image/')) return;
-  const fd = new FormData();
-  fd.append('image', file, file.name || 'pegada.png'); fd.append('subfolder', 'EditorQwen'); fd.append('type', 'input');
   try{
-    const r = await getJSON('/upload/image', {method:'POST', body:fd});
-    const ref = {filename: r.name, subfolder: r.subfolder || '', type: r.type || 'input'};
-    const img = new Image(); img.src = view(ref); await img.decode();
+    const {ref, w, h} = await subir(file);
     const v = S.nextV++;
-    S.msgs.push({kind:'upload', v, ref, w: img.naturalWidth, h: img.naturalHeight});
-    if(img.naturalWidth * img.naturalHeight > 2.5e6)
-      S.msgs.push({kind:'error', text:`Aviso: la imagen es grande (${img.naturalWidth}×${img.naturalHeight}). Qwen trabaja a la resolución de Opciones y el resultado se escala de vuelta; funciona, pero conviene una imagen de ~1-2 MP.`});
+    S.msgs.push({kind:'upload', v, ref, w, h});
+    if(w * h > 2.5e6)
+      S.msgs.push({kind:'error', text:`Aviso: la imagen es grande (${w}×${h}). Qwen trabaja a la resolución de Opciones y el resultado se escala de vuelta; funciona, pero conviene una imagen de ~1-2 MP.`});
     S.base = v; save(); render(); $('#prompt').focus();
   }catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la imagen: ' + e.message}); save(); render(); }
+}
+async function uploadRef(file){
+  if(busy) return;
+  if(!file || !file.type.startsWith('image/')) return;
+  try{ S.refImg = await subir(file); save(); render(); $('#prompt').focus(); }
+  catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la referencia: ' + e.message}); save(); render(); }
 }
 
 // ---------- generar ----------
@@ -448,9 +508,13 @@ function fillOpts(){
   fillSelect($('#optSampler'), models.samplers, savedOpts.sampler, 'euler');
   fillSelect($('#optScheduler'), models.schedulers, savedOpts.scheduler, 'simple');
 }
-function finalPrompt(text){
+function finalPrompt(text, ref){
   let t = text.trim().replace(/\s+/g, ' ');
   if(t && !/[.!?]$/.test(t)) t += '.';
+  if(ref){
+    if(/<image\d+>/i.test(t)) return t;   // instruccion propia que ya nombra las imagenes: va tal cual
+    return [ROPA, t.charAt(0).toUpperCase() + t.slice(1), KEEP_REF].filter(Boolean).join(' ');
+  }
   // en cambios grandes el fondo y la pose si cambian: solo se pide conservar al personaje
   if(opt().keep && t && !/\bkeep\b|\bunchanged\b/i.test(t)) t += grande ? ' Keep the same character and art style.' : ' Keep everything else unchanged.';
   return t;
@@ -475,6 +539,10 @@ function buildGraph(image, prompt, o, seed){
     '14': {class_type:'SaveImage', inputs:{images:['15',0], filename_prefix:'EditorQwen/zona'}},
   };
   if(models.verificar) g['16'] = {class_type:'VerificarValores', inputs:{samples:['7',0], positive:['6',0]}};
+  if(o.ref){   // segunda imagen para Qwen (<image2>); la base sigue siendo image_1, la que se edita
+    g['17'] = {class_type:'LoadImage', inputs:{image: loadName(o.ref.ref)}};
+    g['6'].inputs['images.image_2'] = ['17',0];
+  }
   // LoRAs encadenados entre el modelo y la cache ('30', '31')
   let model = ['2',0];
   o.loras.forEach((l, i) => { const id = String(30 + i); g[id] = {class_type:'LoraLoaderModelOnly', inputs:{model, lora_name:l.name, strength_model:l.s}}; model = [id,0]; });
@@ -493,14 +561,16 @@ function buildGraph(image, prompt, o, seed){
 }
 
 let job = null;
-async function send(text, isRedo){
+async function send(text, redo){   // redo: el resultado que se repite con otra semilla (con su misma referencia)
   text = (text || '').trim();
-  if(!text || busy || !models || S.base === null) return;
+  const ref = redo ? redo.refImg : S.refImg;
+  if((!text && !ref) || busy || !models || S.base === null) return;
   const base = byV(S.base), o = opt();
+  o.ref = ref;
   const seed = o.seed !== null ? o.seed : Math.floor(Math.random() * 2**48);
-  const sent = finalPrompt(text);
-  S.msgs.push({kind:'prompt', text: isRedo ? text + '  (otra variante)' : text, sent, from: base.v});
-  if(!isRedo) $('#prompt').value = '';
+  const sent = finalPrompt(text, ref);
+  S.msgs.push({kind:'prompt', text: redo ? text + '  (otra variante)' : text, sent, from: base.v, refImg: ref});
+  if(!redo) $('#prompt').value = '';
   autosize(); save(); render();
   let r;
   try{
@@ -529,7 +599,8 @@ function startJob(p){
   const timer = setInterval(tick, 1000);
   const labels = {'1':'Cargando la imagen…','2':'Cargando el modelo…','4':'Cargando el codificador de texto…','5':'Cargando el VAE…',
     '6':'Leyendo la imagen y la instrucción…','7':'Dibujando…','8':'Decodificando…','12':'Protegiendo lo que no cambió…','9':'Guardando…','13':'Guardando…',
-    '30':'Aplicando el LoRA…','31':'Aplicando el LoRA…'};
+    '30':'Aplicando el LoRA…','31':'Aplicando el LoRA…','17':'Cargando la referencia…'};
+  if(p.o.ref) labels['6'] = 'Leyendo el personaje, la referencia y la instrucción…';
   job = {id: p.id, el: e,
     preview(blob){ if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = URL.createObjectURL(blob); pv.innerHTML = ''; const i = new Image(); i.src = lastUrl; pv.appendChild(i); },
     event(type, d){
@@ -576,7 +647,8 @@ function startJob(p){
     clearInterval(timer); if(lastUrl) URL.revokeObjectURL(lastUrl);
     const secs = (Date.now() - p.t0) / 1000;
     if(res){ const v = S.nextV++; S.msgs.push(Object.assign({kind:'result', v, from:p.from, text:p.text, seed:p.seed, res:p.o.res, steps:p.o.steps, modo:p.o.modo, secs,
-      grande:!!p.o.grande, loras:p.o.loras || [], cfg:p.o.cfg || 1, sampler:p.o.sampler, scheduler:p.o.scheduler}, res)); S.base = v; }
+      grande:!!p.o.grande, loras:p.o.loras || [], cfg:p.o.cfg || 1, sampler:p.o.sampler, scheduler:p.o.scheduler,
+      refImg:p.o.ref}, res)); S.base = v; }
     else S.msgs.push({kind:'error', text: err});
     S.pending = null; job = null; busy = false; save(); render();
   };
@@ -586,7 +658,7 @@ function startJob(p){
 async function useRaw(m){
   if(!m.raw) return;
   const v = S.nextV++;
-  S.msgs.push({kind:'result', v, from:m.from, text:m.text, seed:m.seed, res:m.res, steps:m.steps, modo:m.modo, secs:0, ref:m.raw, raw:m.raw, zone:null, rawOf:m.v});
+  S.msgs.push({kind:'result', v, from:m.from, text:m.text, seed:m.seed, res:m.res, steps:m.steps, modo:m.modo, secs:0, ref:m.raw, raw:m.raw, zone:null, rawOf:m.v, refImg:m.refImg});
   S.base = v; save(); render();
 }
 
@@ -622,6 +694,14 @@ $('#btnSend').onclick = () => send($('#prompt').value);
 $('#btnAttach').onclick = () => $('#file').click();
 $('#empty').onclick = () => $('#file').click();
 $('#file').onchange = () => { uploadFile($('#file').files[0]); $('#file').value = ''; };
+$('#btnRef').onclick = () => $('#fileRef').click();
+$('#fileRef').onchange = () => { uploadRef($('#fileRef').files[0]); $('#fileRef').value = ''; };
+$('#btnRefQuitar').onclick = () => { if(busy) return; S.refImg = null; save(); render(); };
+// una imagen soltada sobre el boton o el recuadro de la referencia pasa a ser la referencia (en el resto de la ventana, la base)
+for(const id of ['#btnRef', '#refSlot']) $(id).addEventListener('drop', ev => {
+  ev.preventDefault(); ev.stopPropagation(); document.body.classList.remove('drag');
+  const f = [...ev.dataTransfer.files].find(f => f.type.startsWith('image/')); if(f) uploadRef(f);
+});
 document.addEventListener('paste', ev => { const f = [...(ev.clipboardData||{}).files||[]].find(f => f.type.startsWith('image/')); if(f){ ev.preventDefault(); uploadFile(f); } });
 document.addEventListener('dragover', ev => { ev.preventDefault(); document.body.classList.add('drag'); });
 document.addEventListener('dragleave', ev => { if(!ev.relatedTarget) document.body.classList.remove('drag'); });
@@ -652,7 +732,7 @@ $('#btnOptsReset').onclick = () => {
 $('#btnNew').onclick = () => {
   if(busy){ alert('Espera a que termine (o detén) la edición en curso.'); return; }
   if(S.msgs.length && !confirm('¿Empezar una conversación nueva? Las imágenes siguen guardadas en ComfyUI/output/EditorQwen.')) return;
-  S = {cid: S.cid, msgs: [], base: null, nextV: 0, pending: null}; save(); render();
+  S = {cid: S.cid, msgs: [], base: null, nextV: 0, pending: null, refImg: null}; save(); render();
 };
 for(const t of EXAMPLES){ const b = document.createElement('button'); b.textContent = t; b.onclick = () => { $('#prompt').value = t; autosize(); $('#prompt').focus(); }; $('#chips').appendChild(b); }
 

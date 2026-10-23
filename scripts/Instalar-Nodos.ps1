@@ -13,7 +13,7 @@
 #   1. Comprueba que ComfyUI sea 0.37 o mas nuevo (Qwen-Image-2.1 lo necesita).
 #   2. Clona ComfyUI-GGUF (version probada) y le agrega la deteccion de Qwen-Image-2.1 (parchear_gguf.py).
 #   3. Copia los nodos del paquete: ComfyUI-EditorQwen (el editor web) y ComfyUI-ProtegerEdicion (proteger lo que no cambio).
-#   4. Copia el workflow Qwen21-Editar-GGUF.json para usarlo dentro de ComfyUI.
+#   4. Copia los workflows (Qwen21-Editar-GGUF y Qwen21-Ropa-Referencia) para usarlos dentro de ComfyUI.
 #   5. Instala las dependencias de ComfyUI-GGUF sin tocar torch.
 #   6. Crea Abrir-Editor-Qwen.bat en la carpeta de ComfyUI (doble clic = arranca ComfyUI y abre el editor).
 #      En AMD comfyui-rocm ademas agrega a comfyui-user.bat la vista previa y los ajustes de memoria.
@@ -104,7 +104,7 @@ foreach ($n in 'ComfyUI-EditorQwen', 'ComfyUI-ProtegerEdicion') {
 $wf = "$comfy\user\default\workflows"
 New-Item -ItemType Directory -Force $wf | Out-Null
 Copy-Item "$paquete\workflows\*.json" $wf -Force
-Ok "workflow Qwen21-Editar-GGUF.json copiado (menu Workflows de ComfyUI)"
+Ok "workflows Qwen21-Editar-GGUF y Qwen21-Ropa-Referencia copiados (menu Workflows de ComfyUI)"
 
 # ---------- 5. dependencias (sin tocar torch) ----------
 $cons = Join-Path $env:TEMP 'editorqwen_constraints.txt'

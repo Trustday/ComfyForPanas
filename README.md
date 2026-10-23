@@ -37,6 +37,7 @@ Después sigue **solo la sección de tu marca**: [NVIDIA (sección 3)](#3-instal
 | Codificador de texto "int8" (para PCs con 16 GB de RAM y tarjetas AMD) | **Probado**: el resultado es prácticamente idéntico al normal (diferencia media de 0.26 sobre 255). |
 | **Modo Rápido (Turbo, 8 pasos)** | Usa el modelo y el muestreo de la **plantilla oficial** de ComfyUI para Qwen-Image-2.1 Turbo. En una prueba (una sonrisa) salió **prácticamente igual** que el modo Calidad. Su velocidad todavía no la medí. Si un resultado no te convence, repítelo en Calidad. |
 | **Cambio grande** (pose o escena nueva) | **Probado en el editor** (GTX 1070, 1024): "en un bosque nevado con abrigo y un farol" y "sentada en una taberna con una jarra" cambiaron pose, escena y objetos, y mantuvieron cara, pelo y ropa. Tarda lo mismo que una edición normal. |
+| **Referencia** (copiar la ropa de otra imagen) | **Probado** (GTX 1070, modo Rápido, 768): con la instrucción automática, que nombra las prendas, **copió el uniforme completo sin texto extra** (chaqueta, top, cinturón y pantalón) y mantuvo cara, pelo, pose y fondo. Le quedó una franja roja del short original en el pantalón, que en la referencia es blanco liso. Tarda 11.3 s por paso: unos 2 min 30 s con los modelos ya cargados y casi 3 min la primera vez. **La pose no se copia**, por eso el editor ya no lo ofrece. Probé 4 formas (modo Rápido y Calidad, las imágenes en los dos órdenes, y la pose descrita con palabras): o dejaba al personaje en su pose, o lo cambiaba por la persona de la referencia. |
 | **LoRAs y ajustes de muestreo** (CFG, sampler) | **Probado que el editor los aplica:** CFG 3 con `er_sde` + `beta` funcionó y cada paso tardó el doble (9.3 s contra 4.7 s, a 512). **Con un LoRA hecho para Qwen 2.1 todavía no se probó.** Uno de SD 1.5 no hizo nada, como se espera. El nodo GGUF dice que los LoRAs funcionan "de forma experimental": prueba cada LoRA con la misma semilla, con y sin él. |
 | NVIDIA RTX (serie 16, 20, 30, 40, 50) | **No probado por mí** (no tengo esas tarjetas). Usa el ComfyUI portable oficial y los mismos scripts; debería funcionar y ser bastante más rápido. |
 | **AMD Radeon** | **Funciona** en una RX 6700 XT y en una RX 6600 XT (pruebas de usuarios con `comfyui-rocm`), pero **muy lento** en modo Calidad a 1024: 35 s por paso en la 6700 XT y 209 s por paso en la 6600 XT. Una edición además salió dañada. La causa es que **el modelo no cabe en la VRAM**: se copia desde la RAM en cada paso, y con 16 GB de RAM incluso desde el disco. Este paquete trae arreglos que **todavía no se probaron en una Radeon**: modo Rápido con un modelo Turbo más chico que cabe en la tarjeta, resolución 768, codificador int8, VAE en precisión completa (`--fp32-vae`) y una caché que libera RAM. Si ya lo tenías instalado, usa `4-Arreglo-AMD.bat` (sección 11). |
@@ -205,6 +206,27 @@ En cada resultado tienes:
 
 La conversación queda guardada aunque cierres el navegador. **＋ Nueva** empieza con otra imagen.
 
+### Copiar la ropa de otra imagen (＋ Referencia)
+
+Sirve para vestir a tu personaje con la ropa de otra imagen sin describirla con palabras.
+
+1. Sube primero la imagen de **tu personaje**, como siempre.
+2. Clic en **＋ Referencia** (junto al cuadro de texto) y elige la imagen con la ropa que quieres. También puedes soltarla sobre ese botón.
+3. Sobre el cuadro de texto aparecen las dos, numeradas:
+   - **① Personaje (base)**: la imagen que se edita. De ella salen la cara, el pelo, la pose, el estilo, el fondo y el tamaño del resultado.
+   - **② Referencia**: de ella se copia solo la ropa.
+4. Presiona **Enviar**. No hace falta escribir nada: el editor arma la instrucción en inglés (la ves bajo el cuadro de texto). Si escribes algo, se agrega al medio, por ejemplo *"She is holding a sword"*.
+
+Ten en cuenta:
+
+- **La protección sigue activa**, como en un retoque: la cara y el fondo quedan idénticos y se toma de Qwen solo la zona de la ropa.
+- **La pose no se copia** desde la referencia (ver la tabla de la sección 2). Para cambiar la pose, pídela con palabras y **Cambio grande** en una edición normal, sin referencia.
+- **La referencia se queda puesta** para los pedidos siguientes, hasta que presiones **✕ Quitar**. **⇄ Referencia** la cambia por otra.
+- **↻ Otra variante** repite el pedido con la misma referencia que usó ese resultado.
+- **La instrucción automática nombra las prendas** (top, chaqueta, pantalón o falda, cinturón y zapatos), porque con solo "the same outfit" Qwen copió la chaqueta y dejó el short. **Si aun así falta una prenda o se cuela un detalle de la ropa vieja, nómbralo en el texto**, por ejemplo *"Also replace her black shorts with the plain white pants and black belt"*.
+- **Tarda más** que una edición normal, porque Qwen lee dos imágenes: en una GTX 1070, 11.3 s por paso en modo Rápido a 768.
+- **Instrucción propia:** si escribes un pedido que nombra las imágenes como `<image1>` (tu personaje) y `<image2>` (la referencia), se envía tal cual, sin agregarle nada. Ejemplo (sin probar): `Dress the character from <image1> in the jacket from <image2>, keeping her own pants.`
+
 **Opciones (⚙):**
 
 | Opción | Qué hace |
@@ -240,7 +262,7 @@ Bajo el cuadro de texto ves lo que va a cambiar el resultado o el tiempo: Cambio
 - **Di dónde va un accesorio:** "a thin silver necklace **over her shirt collar**". Si no, puede que cambie la ropa para mostrarlo.
 - **Para ropa nueva usa "Change her outfit to…"**, que reemplaza. Con "add…" la pone encima.
 - **Si un resultado no te gusta, prueba ↻ Otra variante** antes de reescribir el pedido.
-- **Las poses se piden con palabras.** Copiar la pose de otra imagen no funcionó: en la prueba, Qwen puso el personaje en el fondo de la otra imagen, pero con su pose original.
+- **Para copiar una ropa que ya tienes en otra imagen**, usa [＋ Referencia](#copiar-la-ropa-de-otra-imagen--referencia) en vez de describirla. Las poses, en cambio, se piden con palabras.
 
 ### Proteger lo que no cambió (activo salvo con Cambio grande)
 
@@ -283,6 +305,8 @@ Siempre: **la primera edición de cada sesión tarda más**, porque carga los mo
 ## 7. Extra: usarlo dentro de ComfyUI
 
 Si te interesa ver el "motor": con ComfyUI abierto, entra a <http://127.0.0.1:8188>, menú **Workflows → Qwen21-Editar-GGUF**. Ahí está el mismo proceso en nodos, con una nota de uso. Eliges la imagen, escribes la instrucción y presionas **Ejecutar**.
+
+**Workflows → Qwen21-Ropa-Referencia** es lo mismo que **＋ Referencia**: dos nodos de imagen, **1 · Personaje (base)** y **2 · Referencia (ropa)**, una instrucción que los nombra `<image1>` y `<image2>`, y la misma protección del workflow de una imagen.
 
 ---
 
@@ -333,7 +357,9 @@ ComfyForPanas\
 ├─ nodos\
 │   ├─ ComfyUI-EditorQwen\        el editor web (se abre en http://127.0.0.1:8188/editor-qwen)
 │   └─ ComfyUI-ProtegerEdicion\   el nodo "Proteger lo que no cambió"
-├─ workflows\Qwen21-Editar-GGUF.json   el mismo proceso para usar dentro de ComfyUI
+├─ workflows\                     el mismo proceso para usar dentro de ComfyUI:
+│   ├─ Qwen21-Editar-GGUF.json            editar una imagen
+│   └─ Qwen21-Ropa-Referencia.json        copiar la ropa de otra imagen
 ├─ referencia\                    aquí quedan el resultado de la prueba y el informe del diagnóstico
 └─ herramientas\generar_guia.py   rehace GUIA.html a partir de README.md (solo para quien mantiene el repositorio)
 ```
@@ -371,6 +397,7 @@ ComfyForPanas\
 - **Modo Rápido:** usa `qwen-image-2.1-turbo` con el muestreo de la plantilla oficial de ComfyUI: CFG 1, euler, 8 pasos con sigmas fijos (`1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0`).
 - **LoRAs:** el editor encadena hasta dos `LoraLoaderModelOnly` entre el modelo GGUF y `QwenImage21Cache`. En el workflow de ComfyUI ese nodo viene desactivado (bypass): elige el archivo y actívalo con Ctrl+B.
 - **Cambio grande:** no agrega el nodo de protección; guarda la salida del VAE tal cual, al tamaño de trabajo (no se escala al tamaño de tu imagen).
+- **Referencia:** el nodo de texto de Qwen-Image-2.1 recibe tu personaje en `image_1` y la referencia en `image_2`, las dos a la resolución de Opciones. Qwen edita la primera (el resultado toma su tamaño) y le antepone a cada una la etiqueta `<image1>`, `<image2>`, que es como la plantilla oficial pide nombrarlas en la instrucción (no "the first image"). La protección se aplica igual que en una edición normal, comparando contra tu personaje.
 - **Sin acceso remoto:** el editor se sirve desde el mismo ComfyUI, así que no hace falta abrir ComfyUI a otras páginas (CORS).
 
 ---
