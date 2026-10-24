@@ -1,0 +1,702 @@
+{
+  "id": "8e41c2d7-5a93-4f0b-b6c1-2d7e9a4f1c58",
+  "revision": 0,
+  "last_node_id": 17,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        320,
+        420
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1,
+            12
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "title": "1 · Personaje (base) = <image1>"
+    },
+    {
+      "id": 2,
+      "type": "UnetLoaderGGUF",
+      "pos": [
+        40,
+        540
+      ],
+      "size": [
+        320,
+        60
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UnetLoaderGGUF"
+      },
+      "widgets_values": [
+        "qwen-image-2.1-Q8_0.gguf"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "QwenImage21Cache",
+      "pos": [
+        400,
+        540
+      ],
+      "size": [
+        300,
+        90
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "QwenImage21Cache"
+      },
+      "widgets_values": [
+        "auto",
+        "default"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPLoader",
+      "pos": [
+        40,
+        660
+      ],
+      "size": [
+        320,
+        110
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "qwen3vl_8b_bf16.safetensors",
+        "qwen_image",
+        "default"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "VAELoader",
+      "pos": [
+        40,
+        820
+      ],
+      "size": [
+        320,
+        60
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            5,
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "qwen_image_2.1_vae_bf16.safetensors"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "TextEncodeQwenImage21",
+      "pos": [
+        400,
+        680
+      ],
+      "size": [
+        440,
+        360
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4
+        },
+        {
+          "name": "images.image_1",
+          "type": "IMAGE",
+          "link": 1,
+          "shape": 7
+        },
+        {
+          "name": "images.image_2",
+          "type": "IMAGE",
+          "link": 19,
+          "shape": 7
+        },
+        {
+          "name": "images.image_3",
+          "type": "IMAGE",
+          "link": 20,
+          "shape": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 5,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextEncodeQwenImage21"
+      },
+      "widgets_values": [
+        "The [describe 1: skin, hair, eyes, clothes] from <image1>, the [describe 2] from <image2> and the [describe 3] from <image3> [describe what they are doing together], in the setting of <image1>. Keep each character's face, hair, eye color and body proportions exactly as in their own image, and the art style of <image1>.",
+        "",
+        1024
+      ],
+      "title": "Instruccion (ingles)"
+    },
+    {
+      "id": 7,
+      "type": "KSampler",
+      "pos": [
+        880,
+        540
+      ],
+      "size": [
+        300,
+        270
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        42,
+        "randomize",
+        25,
+        1,
+        "euler",
+        "simple",
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "DecodificarSeguro",
+      "pos": [
+        1220,
+        540
+      ],
+      "size": [
+        200,
+        50
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 9
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11,
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DecodificarSeguro"
+      },
+      "widgets_values": null
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [
+        1460,
+        60
+      ],
+      "size": [
+        480,
+        720
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "Qwen21_varias"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "ImageCompare",
+      "pos": [
+        1980,
+        60
+      ],
+      "size": [
+        480,
+        720
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 12,
+          "shape": 7
+        },
+        {
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 13,
+          "shape": 7
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "ImageCompare"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "MarkdownNote",
+      "pos": [
+        880,
+        60
+      ],
+      "size": [
+        540,
+        520
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Varias imagenes en una instruccion con Qwen-Image-2.1\n\nQwen recibe **varias imagenes** y en la instruccion se nombran con etiquetas:\n\n| Nodo | Etiqueta | Que aporta |\n|---|---|---|\n| **1 · Personaje (base)** | `<image1>` | la imagen que se edita: estilo, fondo y tamano del resultado |\n| **2 · Imagen 2** | `<image2>` | otro personaje, una ropa, un objeto o un fondo |\n| **3 · Imagen 3** | `<image3>` | lo mismo; si no la usas, borra el nodo |\n\nUsa siempre `<image1>`, `<image2>`..., no \"the first image\". Para agregar otra imagen, conecta un nodo\n**Load Image** al siguiente hueco `images.image_N` del nodo de texto y nombrala `<imageN>`.\n\n**Instruccion** (ingles, en el nodo de texto), por ejemplo:\n\n`The [describe 1: skin, hair, eyes, clothes] from <image1>, the [describe 2] from <image2> and the [describe 3] from <image3> [describe what they are doing together], in the setting of <image1>. Keep each character's face, hair, eye color and body proportions exactly as in their own image, and the art style of <image1>.`\n\n**Reemplaza cada [ ]** por una descripcion en ingles de ese personaje (piel, pelo, ojos, ropa), p. ej.\n`woman with long red hair and green eyes, wearing a white dress`. Sin descripcion, Qwen cambio al\npersonaje de `<image1>` por el de `<image2>`; describiendo a cada uno salieron bien juntos.\n\n**Sin proteccion**: juntar personajes cambia toda la escena, asi que se guarda la imagen de Qwen tal cual\n(como **Cambio grande** en el editor). Para copiar solo una ropa usa el workflow **Qwen21-Ropa-Referencia**,\nque si protege la cara y el fondo.\n\n**resolution** se aplica a todas las imagenes. Cada imagen extra hace mas lento cada paso."
+      ],
+      "title": "Como usar"
+    },
+    {
+      "id": 15,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        400,
+        420
+      ],
+      "size": [
+        320,
+        82
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 4,
+      "title": "LoRA (opcional: selecciona y presiona Ctrl+B para activarlo)",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "elige_un_lora.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        40,
+        1000
+      ],
+      "size": [
+        320,
+        420
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            19
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "title": "2 · Imagen 2 = <image2>"
+    },
+    {
+      "id": 17,
+      "type": "LoadImage",
+      "pos": [
+        40,
+        1480
+      ],
+      "size": [
+        320,
+        420
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            20
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "title": "3 · Imagen 3 = <image3>"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      2,
+      15,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      3,
+      0,
+      7,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      4,
+      0,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      5,
+      5,
+      0,
+      6,
+      4,
+      "VAE"
+    ],
+    [
+      6,
+      6,
+      0,
+      7,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      6,
+      1,
+      7,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      6,
+      2,
+      7,
+      3,
+      "LATENT"
+    ],
+    [
+      9,
+      7,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      10,
+      5,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      12,
+      1,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      2,
+      0,
+      15,
+      0,
+      "MODEL"
+    ],
+    [
+      19,
+      16,
+      0,
+      6,
+      2,
+      "IMAGE"
+    ],
+    [
+      11,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      13,
+      8,
+      0,
+      10,
+      1,
+      "IMAGE"
+    ],
+    [
+      20,
+      17,
+      0,
+      6,
+      3,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.75,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  },
+  "version": 0.4
+}

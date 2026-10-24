@@ -82,13 +82,16 @@
   #final{font-size:12px;color:var(--muted);margin-top:6px;min-height:1em;white-space:pre-line}
   .row button.toggle{flex:none;font-size:13.5px;padding:0 11px}
   .row button.toggle.on{background:var(--warn);border-color:var(--warn);color:#1d2027}
-  /* personaje + referencia: las dos imagenes que recibe Qwen, numeradas como las nombra la instruccion */
+  /* personaje + imagenes extra: todas las que recibe Qwen, numeradas como las nombra la instruccion */
   #refs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
-  #refs .slot{flex:1 1 260px;display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 5px 5px;font-size:13px;min-width:0}
+  #refSlots{display:contents}
+  #refs .slot{flex:1 1 220px;display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 5px 5px;font-size:13px;min-width:0}
   #refs .slot img{width:52px;height:52px;object-fit:cover;border-radius:6px;flex:none;background:var(--bg)}
-  #refs .slot b{display:block}
+  #refs .slot b{display:block;white-space:nowrap}
   #refs .slot small{color:var(--muted)}
-  #refs .slot button{margin-left:auto;flex:none}
+  #refs .slot button{flex:none}
+  #refs .slot button:first-of-type{margin-left:auto}
+  #refs .num{cursor:pointer}
   .num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:650;flex:none}
   .pair{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .pair figure{margin:0}
@@ -132,7 +135,7 @@
 </header>
 
 <div id="chat">
-  <div id="empty"><b>Sube una imagen para empezar</b>Haz clic aquí, arrástrala a la ventana o pégala con Ctrl+V.<br>Luego escribe qué quieres cambiar (en inglés) y sigue editando el resultado las veces que quieras.<br>Para copiarle a tu personaje la ropa de otra imagen, agrégala con <b style="display:inline;font-size:inherit">＋ Referencia</b>.</div>
+  <div id="empty"><b>Sube una imagen para empezar</b>Haz clic aquí, arrástrala a la ventana o pégala con Ctrl+V.<br>Luego escribe qué quieres cambiar (en inglés) y sigue editando el resultado las veces que quieras.<br>Para usar otras imágenes en la instrucción (otro personaje, una ropa, un objeto…), agrégalas con <b style="display:inline;font-size:inherit">＋ Imagen</b>.</div>
   <div class="wrap" id="msgs"></div>
 </div>
 
@@ -141,18 +144,15 @@
     <div id="strip" class="strip hidden" title="Historial de versiones: haz clic en una para seguir editando desde ella"></div>
     <div id="base" class="hidden"><img alt=""><span></span></div>
     <div id="refs" class="hidden">
-      <div class="slot" title="La imagen que se edita: de aquí salen la cara, el pelo, el estilo y el fondo. Qwen la recibe como <image1>.">
-        <span class="num">1</span><img id="refsBase" alt=""><div><b>Personaje (base)</b><small id="refsBaseInfo"></small></div>
+      <div class="slot" title="La imagen que se edita: de ella salen el tamaño del resultado, el estilo y el fondo. Qwen la recibe como &lt;image1&gt;.">
+        <span class="num" data-n="1" title="Escribir &lt;image1&gt; en la instrucción">1</span><img id="refsBase" alt=""><div><b>Personaje (base)</b><small id="refsBaseInfo"></small></div>
       </div>
-      <div class="slot" id="refSlot" title="De esta imagen solo se copia la ropa. Qwen la recibe como <image2>. Puedes soltar aquí otra imagen para cambiarla.">
-        <span class="num">2</span><img id="refsRef" alt=""><div><b>Referencia</b><small>se copia la ropa</small></div>
-        <button id="btnRefQuitar" class="small" title="Quitar la referencia y volver a editar con una sola imagen">✕ Quitar</button>
-      </div>
+      <div id="refSlots"></div>
     </div>
     <div class="row">
       <button id="btnAttach" title="Subir otra imagen (empieza desde ella)" aria-label="Subir imagen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
       <textarea id="prompt" rows="1" placeholder="Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”"></textarea>
-      <button id="btnRef" class="toggle" title="Agregar una segunda imagen para copiarle a tu personaje la ropa">＋ Referencia</button>
+      <button id="btnRef" class="toggle">＋ Imagen</button>
       <button id="btnGrande" class="toggle" title="Para pose o escena nueva: no protege nada y usa la imagen completa de Qwen. Déjalo apagado para retoques (ropa, gestos, accesorios).">Cambio grande</button>
       <div class="modo" id="modo" title="Rápido = modelo Turbo, 8 pasos (unas 3 veces más rápido). Calidad = modelo normal, 25 pasos.">
         <button data-m="turbo">⚡ Rápido</button><button data-m="calidad">Calidad</button>
@@ -163,7 +163,7 @@
     <div class="chips" id="chips"></div>
   </div>
   <input type="file" id="file" accept="image/*" hidden>
-  <input type="file" id="fileRef" accept="image/*" hidden>
+  <input type="file" id="fileRef" accept="image/*" multiple hidden>
 </footer>
 
 <div id="opts" class="hidden">
@@ -183,7 +183,7 @@
   <label for="optThr">Umbral de protección</label>
   <input id="optThr" type="number" min="1" max="128" value="20">
   <div class="hint">Más alto = se toma de Qwen una zona más chica. 20 es el valor probado.</div>
-  <label class="chk"><input type="checkbox" id="optKeep" checked> Agregar “Keep everything else unchanged.” si no lo escribes (con Cambio grande: “Keep the same character and art style.”)</label>
+  <label class="chk"><input type="checkbox" id="optKeep" checked> Agregar “Keep everything else unchanged.” si no lo escribes (con Cambio grande: “Keep the same character and art style.”; con varias imágenes, que conserve la cara, el pelo y el estilo de cada personaje)</label>
 
   <h4>LoRAs (opcional)</h4>
   <div class="hint">Archivos de la carpeta <code>models\loras</code> de ComfyUI. Solo sirven los hechos para <b>Qwen-Image 2.1</b>: los de otros modelos (SD 1.5, SDXL, Qwen-Image antiguo) no hacen nada. El número es la fuerza (1 = normal).</div>
@@ -229,9 +229,11 @@ const EXAMPLES = [
 const $ = s => document.querySelector(s);
 
 // ---------- estado (se guarda en localStorage) ----------
-// refImg: imagen de referencia (de ella se copia la ropa) que acompaña a la base mientras no se quite; no es una versión
-let S = {cid: crypto.randomUUID(), msgs: [], base: null, nextV: 0, pending: null, refImg: null};
+// refs: imagenes extra (<image2>, <image3>...) que acompañan a la base mientras no se quiten; no son versiones
+let S = {cid: crypto.randomUUID(), msgs: [], base: null, nextV: 0, pending: null, refs: []};
 try{ const s = JSON.parse(localStorage.getItem(STORE)); if(s && s.cid) S = Object.assign(S, s); }catch(e){}
+if(S.refImg){ S.refs = [S.refImg]; delete S.refImg; }   // conversacion guardada cuando habia una sola referencia
+const refsOf = m => m.refs || (m.refImg ? [m.refImg] : []);
 const save = () => { try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} };
 const versions = () => S.msgs.filter(m => m.ref && m.v !== undefined);
 const byV = v => versions().find(m => m.v === v);
@@ -242,11 +244,15 @@ try{ savedOpts = JSON.parse(localStorage.getItem(STORE + '.opts')) || {}; }catch
 let modo = savedOpts.modo || null;   // 'turbo' (Rapido, 8 pasos) o 'calidad' (25 pasos); se elige al conocer los modelos
 let grande = false;   // Cambio grande: sin proteccion (pose o escena nueva); no se guarda entre sesiones
 // Qwen-Image-2.1 nombra las imagenes <image1>, <image2>... y edita la primera (de ella sale el tamano del resultado),
-// asi que la base va primero y la referencia segunda. La plantilla oficial pide nombrarlas con esas etiquetas.
-// De la referencia solo se copia la ropa: la pose no se copio en ninguna prueba (o la ignoraba o cambiaba al personaje).
+// asi que la base va primero y las demas despues. La plantilla oficial pide nombrarlas con esas etiquetas.
+// El nodo de texto acepta hasta 16; el editor deja 4 extra, porque cada una alarga cada paso.
+// La pose de otra imagen no se copio en ninguna prueba (o la ignoraba o cambiaba al personaje): se pide con palabras.
+const MAX_REFS = 4;
 // La ropa se pide prenda por prenda: con solo "the same outfit" Qwen copio la chaqueta y dejo el short original.
-const ROPA = "Dress the character from <image1> in the complete outfit of the person in <image2>, replacing all of the character's clothing (top, jacket, pants or skirt, belt and shoes) with the matching pieces from <image2>, keeping the pose from <image1>.";
+const ROPA = n => `Dress the character from <image1> in the complete outfit of the person in <image${n}>, replacing all of the character's clothing (top, jacket, pants or skirt, belt and shoes) with the matching pieces from <image${n}>, keeping the pose from <image1>.`;
 const KEEP_REF = 'Keep the face, hair, eye color, body proportions and art style of the character from <image1>, and keep the background of <image1>.';
+// con Cambio grande (personajes juntos, pose o escena nueva) cambia todo: se pide conservar a cada personaje como en su imagen
+const KEEP_VARIAS = "Keep each character's face, hair, eye color and body proportions exactly as in their own image, and the art style of <image1>.";
 // sigmas del modo Turbo: los de la plantilla oficial de ComfyUI (image_qwen_image_2_1_turbo_image_edit)
 const TURBO_SIGMAS = '1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0';
 const view = (ref, bust) => `${API}/view?filename=${encodeURIComponent(ref.filename)}&subfolder=${encodeURIComponent(ref.subfolder||'')}&type=${ref.type}${bust?'&t='+Date.now():''}`;
@@ -363,13 +369,14 @@ function renderMsg(m){
   }
   if(m.kind === 'prompt'){
     const sent = m.sent !== m.text ? `<div class="sent">Enviado: ${esc(m.sent)}</div>` : '';
-    const pair = m.refImg ? `<div class="pair">
-        <figure><img data-i="base" alt=""><figcaption><span class="num">1</span>Personaje · v${m.from}</figcaption></figure>
-        <figure><img data-i="ref" alt=""><figcaption><span class="num">2</span>Referencia · ropa</figcaption></figure></div>` : '';
+    const refs = refsOf(m);
+    const pair = refs.length ? `<div class="pair">
+        <figure><img data-i="1" alt=""><figcaption><span class="num">1</span>Personaje · v${m.from}</figcaption></figure>
+        ${refs.map((r, i) => `<figure><img data-i="${i + 2}" alt=""><figcaption><span class="num">${i + 2}</span>Imagen ${i + 2}</figcaption></figure>`).join('')}</div>` : '';
     const e = el(`<div class="msg user"><div class="bubble">${pair}${esc(m.text)}<div class="sent">sobre v${m.from}</div>${sent}</div></div>`);
-    if(m.refImg){
-      const b = byV(m.from); if(b) stickImg(e.querySelector('[data-i=base]'), view(b.ref));
-      stickImg(e.querySelector('[data-i=ref]'), view(m.refImg.ref));
+    if(refs.length){
+      const b = byV(m.from); if(b) stickImg(e.querySelector('[data-i="1"]'), view(b.ref));
+      refs.forEach((r, i) => stickImg(e.querySelector(`[data-i="${i + 2}"]`), view(r.ref)));
     }
     return e;
   }
@@ -377,7 +384,7 @@ function renderMsg(m){
   if(m.kind === 'result'){
     const cur = S.base === m.v;
     const calidad = m.modo !== 'turbo';
-    const extra = [m.refImg ? 'ropa de la referencia' : '', m.grande ? 'Cambio grande (sin proteger)' : '',
+    const extra = [refsOf(m).length ? `${refsOf(m).length + 1} imágenes` : '', m.grande ? 'Cambio grande (sin proteger)' : '',
       ...(m.loras || []).map(l => `LoRA ${shortName(l.name)} ${l.s}`),
       calidad && m.cfg > 1 ? `CFG ${m.cfg}` : '',
       calidad && m.sampler && (m.sampler !== 'euler' || m.scheduler !== 'simple') ? `${m.sampler} + ${m.scheduler}` : ''
@@ -421,31 +428,40 @@ async function zoneInfo(m, span){
   }catch(e){}
 }
 function refreshComposer(){
-  const b = S.base !== null ? byV(S.base) : null, r = S.refImg;
-  $('#base').classList.toggle('hidden', !b || versions().length > 1 || !!S.refImg);
+  const b = S.base !== null ? byV(S.base) : null, n = S.refs.length;
+  $('#base').classList.toggle('hidden', !b || versions().length > 1 || n > 0);
   if(b){ $('#base img').src = view(b.ref); $('#base span').textContent = `Editando v${b.v}` + (b.kind === 'upload' ? ' (imagen original)' : ''); }
-  $('#refs').classList.toggle('hidden', !S.refImg);
-  if(S.refImg){
+  $('#refs').classList.toggle('hidden', !n);
+  if(n){
     $('#refsBase').src = b ? view(b.ref) : '';
-    $('#refsBaseInfo').textContent = b ? `v${b.v}` + (b.kind === 'upload' ? ' · imagen subida' : '') + ' · cara, pelo, estilo y fondo' : 'primero sube la imagen de tu personaje';
-    $('#refsRef').src = view(S.refImg.ref);
+    $('#refsBaseInfo').textContent = b ? `v${b.v}` + (b.kind === 'upload' ? ' · imagen subida' : '') + ' · la que se edita' : 'primero sube la imagen de tu personaje';
   }
-  for(const id of ['#btnRefQuitar', '#btnRef']) $(id).disabled = busy;
-  $('#btnRef').textContent = S.refImg ? '⇄ Referencia' : '＋ Referencia';
-  $('#btnRef').title = S.refImg ? 'Cambiar la imagen de referencia' : 'Agregar una segunda imagen para copiarle a tu personaje la ropa';
-  $('#prompt').placeholder = r ? 'Opcional: algo más en inglés, p. ej. “She is holding a sword”' : 'Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”';
-  $('#btnSend').disabled = !models || !b || busy || (!$('#prompt').value.trim() && !r);
+  renderRefs();
+  $('#btnRef').disabled = busy || n >= MAX_REFS;
+  $('#btnRef').title = n >= MAX_REFS ? `Ya hay ${MAX_REFS} imágenes extra, el máximo: quita una para agregar otra`
+    : 'Agregar otra imagen (otro personaje, una ropa, un objeto o un fondo) para nombrarla en la instrucción';
+  // sin describirlos, Qwen cambio al personaje de <image1> por el de <image2>; describiendo a cada uno salieron bien juntos
+  $('#prompt').placeholder = n ? 'En inglés, nombrando las imágenes (<image1>, <image2>…) y describiendo a cada personaje: piel, pelo, ojos y ropa' : 'Describe el cambio en inglés, p. ej. “Change the background to a beach at sunset”';
+  $('#btnSend').disabled = !models || !b || busy || !$('#prompt').value.trim();
   $('#btnAttach').disabled = busy;
   $('#btnSend').textContent = busy ? 'Generando…' : 'Enviar';
   $('#btnGrande').disabled = busy;
   $('#btnGrande').classList.toggle('on', grande);
   // lo que cambia el resultado o el tiempo queda a la vista bajo el cuadro de texto
-  const o = opt(), notas = [];
-  if(r) notas.push('Referencia: copia la ropa · más lento (Qwen lee dos imágenes)');
+  const o = opt(), notas = [], t = $('#prompt').value;
+  if(n){
+    notas.push(`${n + 1} imágenes: más lento (Qwen las lee todas)`);
+    const nombradas = [...nombrar(t, n + 1).matchAll(/<image(\d+)>/gi)].map(x => +x[1]);
+    const sueltas = S.refs.map((_, i) => i + 2).filter(k => t.trim() && !nombradas.includes(k));
+    if(sueltas.length) notas.push(`la instrucción no nombra ${sueltas.map(k => `<image${k}>`).join(', ')} (Qwen la ve igual)`);
+    const sobran = nombradas.filter(k => k > n + 1);
+    if(sobran.length) notas.push(`no hay <image${sobran[0]}>: hay ${n + 1} imágenes`);
+    if(!grande) notas.push('con protección: sirve para ropa u objetos; para juntar personajes o cambiar la pose, activa Cambio grande');
+  }
   if(grande) notas.push('Cambio grande: sin protección');
   if(o.loras.length) notas.push('LoRA: ' + o.loras.map(l => `${shortName(l.name)} (${l.s})`).join(', '));
   if(modo === 'calidad' && o.cfg > 1) notas.push(`CFG ${o.cfg}: ≈ el doble de tiempo`);
-  const txt = $('#prompt').value.trim() || r ? 'Se enviará: ' + finalPrompt($('#prompt').value, r) : '';
+  const txt = t.trim() ? 'Se enviará: ' + finalPrompt(t, S.refs) : '';
   $('#final').textContent = [txt, notas.join(' · ')].filter(Boolean).join('\n');
   for(const bt of document.querySelectorAll('#modo button')){
     const disponible = models && (bt.dataset.m === 'turbo' ? models.turbo : models.unet);
@@ -453,6 +469,43 @@ function refreshComposer(){
     bt.classList.toggle('on', bt.dataset.m === modo);
     bt.title = disponible ? '' : (bt.dataset.m === 'turbo' ? 'Falta el modelo Turbo: bájalo con 2-Descargar-Modelos.bat' : 'Falta el modelo normal (qwen-image-2.1-Q8_0.gguf)');
   }
+}
+// recuadros de las imagenes extra; se rehacen solo si cambian, para no recargar las miniaturas a cada tecla
+function renderRefs(){
+  const box = $('#refSlots'), sig = S.refs.map(r => loadName(r.ref)).join('\n');
+  if(box.dataset.sig !== sig){
+    box.dataset.sig = sig; box.innerHTML = '';
+    S.refs.forEach((r, i) => {
+      const k = i + 2;
+      const e = el(`<div class="slot" title="Qwen la recibe como &lt;image${k}&gt;. Puedes soltar aquí otra imagen para cambiarla.">
+        <span class="num" data-n="${k}" title="Escribir &lt;image${k}&gt; en la instrucción">${k}</span><img alt=""><div><b>Imagen ${k}</b><small>${r.w}×${r.h}</small></div>
+        <button class="small" data-a="ropa" title="Escribe la instrucción para ponerle a ① la ropa de esta imagen (con protección)">👕 Su ropa</button>
+        <button class="small" data-a="quitar" title="Quitar esta imagen">✕</button></div>`);
+      e.querySelector('img').src = view(r.ref);
+      e.querySelector('[data-a=ropa]').onclick = () => { grande = false; setPrompt(ROPA(k)); };
+      e.querySelector('[data-a=quitar]').onclick = () => quitarRef(i);
+      e.addEventListener('drop', ev => {
+        ev.preventDefault(); ev.stopPropagation(); document.body.classList.remove('drag');
+        uploadRef(ev.dataTransfer.files, i);
+      });
+      box.appendChild(e);
+    });
+  }
+  for(const bt of document.querySelectorAll('#refSlots button')) bt.disabled = busy;
+}
+function setPrompt(t){ $('#prompt').value = t; autosize(); $('#prompt').focus(); }
+function insertar(t){   // en el cursor, con espacios alrededor si hacen falta
+  const ta = $('#prompt'), v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+  const ins = (a && !/\s/.test(v[a - 1]) ? ' ' : '') + t + (b < v.length && /\s/.test(v[b]) ? '' : ' ');
+  ta.value = v.slice(0, a) + ins + v.slice(b);
+  ta.focus(); ta.selectionStart = ta.selectionEnd = a + ins.length; autosize();
+}
+function quitarRef(i){
+  if(busy) return;
+  // las imagenes siguientes bajan un numero, y la instruccion escrita con ellas
+  const k = i + 2, ta = $('#prompt');
+  ta.value = nombrar(ta.value, S.refs.length + 1).replace(/<image(\d+)>/gi, (s, d) => +d > k ? `<image${d - 1}>` : s);
+  S.refs.splice(i, 1); save(); autosize(); render();
 }
 
 // ---------- subir imagen ----------
@@ -476,11 +529,19 @@ async function uploadFile(file){
     S.base = v; save(); render(); $('#prompt').focus();
   }catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la imagen: ' + e.message}); save(); render(); }
 }
-async function uploadRef(file){
+async function uploadRef(files, i){   // i: recuadro que se reemplaza; sin i se agregan al final
   if(busy) return;
-  if(!file || !file.type.startsWith('image/')) return;
-  try{ S.refImg = await subir(file); save(); render(); $('#prompt').focus(); }
-  catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la referencia: ' + e.message}); save(); render(); }
+  files = [...files].filter(f => f.type.startsWith('image/'));
+  if(i !== undefined) files = files.slice(0, 1);
+  else if(S.refs.length + files.length > MAX_REFS){
+    S.msgs.push({kind:'error', text:`El editor usa hasta ${MAX_REFS} imágenes extra: se agregaron las primeras ${Math.max(0, MAX_REFS - S.refs.length)}.`});
+    files = files.slice(0, Math.max(0, MAX_REFS - S.refs.length));
+  }
+  for(const f of files){
+    try{ const r = await subir(f); if(i === undefined) S.refs.push(r); else S.refs[i] = r; }
+    catch(e){ S.msgs.push({kind:'error', text:'No se pudo subir la imagen: ' + e.message}); }
+  }
+  save(); render(); $('#prompt').focus();
 }
 
 // ---------- generar ----------
@@ -508,16 +569,16 @@ function fillOpts(){
   fillSelect($('#optSampler'), models.samplers, savedOpts.sampler, 'euler');
   fillSelect($('#optScheduler'), models.schedulers, savedOpts.scheduler, 'simple');
 }
-function finalPrompt(text, ref){
+// "image 2", "imagen 2", "picture 2"... pasan a <image2>, como las nombra Qwen, si esa imagen existe
+const nombrar = (t, total) => t.replace(/(?<![<\w])(?:image|imagen|img|picture|pic|photo|foto)\s*#?(\d{1,2})\b/gi, (s, d) => +d >= 1 && +d <= total ? `<image${+d}>` : s);
+function finalPrompt(text, refs){
   let t = text.trim().replace(/\s+/g, ' ');
+  if(refs.length) t = nombrar(t, refs.length + 1);
   if(t && !/[.!?]$/.test(t)) t += '.';
-  if(ref){
-    if(/<image\d+>/i.test(t)) return t;   // instruccion propia que ya nombra las imagenes: va tal cual
-    return [ROPA, t.charAt(0).toUpperCase() + t.slice(1), KEEP_REF].filter(Boolean).join(' ');
-  }
+  if(!opt().keep || !t || /\bkeep\b|\bunchanged\b/i.test(t)) return t;
+  if(refs.length) return t + ' ' + (grande ? KEEP_VARIAS : KEEP_REF);
   // en cambios grandes el fondo y la pose si cambian: solo se pide conservar al personaje
-  if(opt().keep && t && !/\bkeep\b|\bunchanged\b/i.test(t)) t += grande ? ' Keep the same character and art style.' : ' Keep everything else unchanged.';
-  return t;
+  return t + (grande ? ' Keep the same character and art style.' : ' Keep everything else unchanged.');
 }
 function buildGraph(image, prompt, o, seed){
   const turbo = o.modo === 'turbo';
@@ -539,10 +600,12 @@ function buildGraph(image, prompt, o, seed){
     '14': {class_type:'SaveImage', inputs:{images:['15',0], filename_prefix:'EditorQwen/zona'}},
   };
   if(models.verificar) g['16'] = {class_type:'VerificarValores', inputs:{samples:['7',0], positive:['6',0]}};
-  if(o.ref){   // segunda imagen para Qwen (<image2>); la base sigue siendo image_1, la que se edita
-    g['17'] = {class_type:'LoadImage', inputs:{image: loadName(o.ref.ref)}};
-    g['6'].inputs['images.image_2'] = ['17',0];
-  }
+  // imagenes extra para Qwen (<image2>, <image3>...) en los nodos '62', '63'...; la base sigue siendo image_1, la que se edita
+  o.refs.forEach((r, i) => {
+    const id = String(62 + i);
+    g[id] = {class_type:'LoadImage', inputs:{image: loadName(r.ref)}};
+    g['6'].inputs['images.image_' + (i + 2)] = [id, 0];
+  });
   // LoRAs encadenados entre el modelo y la cache ('30', '31')
   let model = ['2',0];
   o.loras.forEach((l, i) => { const id = String(30 + i); g[id] = {class_type:'LoraLoaderModelOnly', inputs:{model, lora_name:l.name, strength_model:l.s}}; model = [id,0]; });
@@ -561,15 +624,17 @@ function buildGraph(image, prompt, o, seed){
 }
 
 let job = null;
-async function send(text, redo){   // redo: el resultado que se repite con otra semilla (con su misma referencia)
+async function send(text, redo){   // redo: el resultado que se repite con otra semilla (con sus mismas imagenes e instruccion)
   text = (text || '').trim();
-  const ref = redo ? redo.refImg : S.refImg;
-  if((!text && !ref) || busy || !models || S.base === null) return;
+  const refs = redo ? refsOf(redo) : S.refs;
+  // los resultados de antes no guardaban lo enviado; los de referencia sin texto copiaban la ropa
+  const sent = redo ? redo.sent || finalPrompt(text || ROPA(2), refs) : finalPrompt(text, refs);
+  if(!sent || busy || !models || S.base === null) return;
   const base = byV(S.base), o = opt();
-  o.ref = ref;
+  o.refs = refs;
+  if(redo) o.grande = !!redo.grande;   // la instruccion repetida se armo para esa proteccion
   const seed = o.seed !== null ? o.seed : Math.floor(Math.random() * 2**48);
-  const sent = finalPrompt(text, ref);
-  S.msgs.push({kind:'prompt', text: redo ? text + '  (otra variante)' : text, sent, from: base.v, refImg: ref});
+  S.msgs.push({kind:'prompt', text: redo ? text + '  (otra variante)' : text, sent, from: base.v, refs});
   if(!redo) $('#prompt').value = '';
   autosize(); save(); render();
   let r;
@@ -580,7 +645,7 @@ async function send(text, redo){   // redo: el resultado que se repite con otra 
       const ne = j.node_errors ? Object.values(j.node_errors).map(x => x.errors.map(e => e.details || e.message).join('; ')).join(' | ') : '';
       throw new Error((j.error && j.error.message || 'ComfyUI rechazó el trabajo') + (ne ? ': ' + ne : ''));
     }
-    S.pending = {id: j.prompt_id, from: base.v, text, seed, o, t0: Date.now()}; save();
+    S.pending = {id: j.prompt_id, from: base.v, text, sent, seed, o, t0: Date.now()}; save();
     startJob(S.pending);
   }catch(e){ S.msgs.push({kind:'error', text: 'No se pudo enviar: ' + e.message}); save(); render(); }
 }
@@ -599,8 +664,10 @@ function startJob(p){
   const timer = setInterval(tick, 1000);
   const labels = {'1':'Cargando la imagen…','2':'Cargando el modelo…','4':'Cargando el codificador de texto…','5':'Cargando el VAE…',
     '6':'Leyendo la imagen y la instrucción…','7':'Dibujando…','8':'Decodificando…','12':'Protegiendo lo que no cambió…','9':'Guardando…','13':'Guardando…',
-    '30':'Aplicando el LoRA…','31':'Aplicando el LoRA…','17':'Cargando la referencia…'};
-  if(p.o.ref) labels['6'] = 'Leyendo el personaje, la referencia y la instrucción…';
+    '30':'Aplicando el LoRA…','31':'Aplicando el LoRA…'};
+  const nr = (p.o.refs || []).length;
+  for(let i = 0; i < nr; i++) labels[String(62 + i)] = 'Cargando las imágenes…';
+  if(nr) labels['6'] = `Leyendo las ${nr + 1} imágenes y la instrucción…`;
   job = {id: p.id, el: e,
     preview(blob){ if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = URL.createObjectURL(blob); pv.innerHTML = ''; const i = new Image(); i.src = lastUrl; pv.appendChild(i); },
     event(type, d){
@@ -648,7 +715,7 @@ function startJob(p){
     const secs = (Date.now() - p.t0) / 1000;
     if(res){ const v = S.nextV++; S.msgs.push(Object.assign({kind:'result', v, from:p.from, text:p.text, seed:p.seed, res:p.o.res, steps:p.o.steps, modo:p.o.modo, secs,
       grande:!!p.o.grande, loras:p.o.loras || [], cfg:p.o.cfg || 1, sampler:p.o.sampler, scheduler:p.o.scheduler,
-      refImg:p.o.ref}, res)); S.base = v; }
+      refs:p.o.refs || [], sent:p.sent}, res)); S.base = v; }
     else S.msgs.push({kind:'error', text: err});
     S.pending = null; job = null; busy = false; save(); render();
   };
@@ -658,7 +725,7 @@ function startJob(p){
 async function useRaw(m){
   if(!m.raw) return;
   const v = S.nextV++;
-  S.msgs.push({kind:'result', v, from:m.from, text:m.text, seed:m.seed, res:m.res, steps:m.steps, modo:m.modo, secs:0, ref:m.raw, raw:m.raw, zone:null, rawOf:m.v, refImg:m.refImg});
+  S.msgs.push({kind:'result', v, from:m.from, text:m.text, seed:m.seed, res:m.res, steps:m.steps, modo:m.modo, secs:0, ref:m.raw, raw:m.raw, zone:null, rawOf:m.v, refs:refsOf(m), sent:m.sent});
   S.base = v; save(); render();
 }
 
@@ -695,13 +762,13 @@ $('#btnAttach').onclick = () => $('#file').click();
 $('#empty').onclick = () => $('#file').click();
 $('#file').onchange = () => { uploadFile($('#file').files[0]); $('#file').value = ''; };
 $('#btnRef').onclick = () => $('#fileRef').click();
-$('#fileRef').onchange = () => { uploadRef($('#fileRef').files[0]); $('#fileRef').value = ''; };
-$('#btnRefQuitar').onclick = () => { if(busy) return; S.refImg = null; save(); render(); };
-// una imagen soltada sobre el boton o el recuadro de la referencia pasa a ser la referencia (en el resto de la ventana, la base)
-for(const id of ['#btnRef', '#refSlot']) $(id).addEventListener('drop', ev => {
+$('#fileRef').onchange = async () => { await uploadRef($('#fileRef').files); $('#fileRef').value = ''; };
+// imagenes soltadas sobre el boton se agregan como extra; sobre un recuadro, lo reemplazan; en el resto de la ventana, cambian la base
+$('#btnRef').addEventListener('drop', ev => {
   ev.preventDefault(); ev.stopPropagation(); document.body.classList.remove('drag');
-  const f = [...ev.dataTransfer.files].find(f => f.type.startsWith('image/')); if(f) uploadRef(f);
+  uploadRef(ev.dataTransfer.files);
 });
+$('#refs').addEventListener('click', ev => { const k = ev.target.dataset.n; if(k) insertar(`<image${k}>`); });
 document.addEventListener('paste', ev => { const f = [...(ev.clipboardData||{}).files||[]].find(f => f.type.startsWith('image/')); if(f){ ev.preventDefault(); uploadFile(f); } });
 document.addEventListener('dragover', ev => { ev.preventDefault(); document.body.classList.add('drag'); });
 document.addEventListener('dragleave', ev => { if(!ev.relatedTarget) document.body.classList.remove('drag'); });
@@ -732,7 +799,7 @@ $('#btnOptsReset').onclick = () => {
 $('#btnNew').onclick = () => {
   if(busy){ alert('Espera a que termine (o detén) la edición en curso.'); return; }
   if(S.msgs.length && !confirm('¿Empezar una conversación nueva? Las imágenes siguen guardadas en ComfyUI/output/EditorQwen.')) return;
-  S = {cid: S.cid, msgs: [], base: null, nextV: 0, pending: null, refImg: null}; save(); render();
+  S = {cid: S.cid, msgs: [], base: null, nextV: 0, pending: null, refs: []}; save(); render();
 };
 for(const t of EXAMPLES){ const b = document.createElement('button'); b.textContent = t; b.onclick = () => { $('#prompt').value = t; autosize(); $('#prompt').focus(); }; $('#chips').appendChild(b); }
 
